@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  agente:
+    build: .
+    container_name: hermes_financiero
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_homelab
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/var/lib/grafana_db
