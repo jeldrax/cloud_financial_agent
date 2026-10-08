@@ -1,5 +1,11 @@
 {
-  "processing": "Processing your expense...",
-  "unauthorized": "Access denied.",
-  "report_empty": "No transactions to display."
+  "processing": "⏳ Procesando tu gasto con IA...",
+  "unauthorized": "⛔ Acceso denegado. Este bot es privado.",
+  "report_empty": "📊 No hay transacciones registradas todavía.",
+  "report_title": "Distribución de Gastos por Categoría",
+  "expense_saved": "✅ *Gasto registrado:*\n💰 *Monto:* ${monto:.2f}\n🏷️ *Categoría:* {categoria}\n📝 *Concepto:* {concepto}\n💳 *Método:* {metodo_pago}",
+  "expense_email_saved": "📥 *Gasto detectado en correo bancario:*\n💰 *Monto:* ${monto:.2f}\n🏷️ *Categoría:* {categoria}\n📝 *Concepto:* {concepto}\n💳 *Método:* {metodo_pago}",
+  "expense_error": "❌ No se pudo extraer la información del gasto. Asegúrate de incluir al menos el monto y concepto.",
+  "welcome": "👋 ¡Hola! Soy tu *Agente Financiero Autónomo*.\n\nPuedes enviarme tus gastos por texto (ej. _'Compré un café por $45 en Starbucks'_) o pedir reportes.\n\nComandos:\n/reporte - Gráfico de gastos\n/ayuda - Ver opciones",
+  "help": "📌 *Comandos disponibles:*\n• Envía un mensaje con cualquier gasto (texto libre).\n• `/reporte` - Genera una gráfica con la distribución de gastos.\n• `/ayuda` - Muestra esta ayuda."
 }

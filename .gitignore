@@ -1,14 +1,20 @@
-#Entornos y dependencias
+# Entornos y dependencias
 venv/
+.venv/
 __pycache__/
 *.pyc
 
-#Variables de entorno
+# Variables de entorno y secretos (nunca subir)
 .env
+.env.*
+!.env.example
 
-#Bases de datos locales
+# Bases de datos locales
 data/*.db
 *.db
+*.sqlite3
 
-#Archivos temporales de gráficos
+# Logs y temporales
+*.log
 temp_chart.png
+.pytest_cache/
