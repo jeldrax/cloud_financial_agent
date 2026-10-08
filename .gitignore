@@ -1,0 +1,14 @@
+#Entornos y dependencias
+venv/
+__pycache__/
+*.pyc
+
+#Variables de entorno
+.env
+
+#Bases de datos locales
+data/*.db
+*.db
+
+#Archivos temporales de gráficos
+temp_chart.png
