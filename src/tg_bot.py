@@ -57,10 +57,10 @@ async def recibir_gasto(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     datos = procesar_texto_ia(texto_usuario)
     if datos:
-        # Validación de exclusión para evitar duplicidad y no alterar regla 50/30/20
+        # Validacion de exclusion para evitar duplicidad y no alterar regla 50/30/20
         if datos.get("categoria") == "IGNORAR":
             await mensaje_temporal.edit_text(
-                "✅ Movimiento interno o ingreso ignorado correctamente (No afecta tu presupuesto 50/30/20)."
+                "Movimiento interno o ingreso ignorado correctamente (No afecta tu presupuesto 50/30/20)."
             )
             return
 
@@ -73,13 +73,13 @@ async def recibir_gasto(update: Update, context: ContextTypes.DEFAULT_TYPE):
             metodo_pago=metodo,
             tipo=tipo
         )
-        icono = "💵 *Ingreso registrado:*" if tipo == "Ingreso" else "✅ *Gasto registrado:*"
+        icono = "*Ingreso registrado:*" if tipo == "Ingreso" else "*Gasto registrado:*"
         mensaje_exito = (
             f"{icono}\n"
-            f"💰 *Monto:* ${datos['monto']:,.2f}\n"
-            f"🏷️ *Categoría (50/30/20):* {datos['categoria']}\n"
-            f"📝 *Concepto:* {datos['concepto']}\n"
-            f"💳 *Método:* {metodo}"
+            f"- *Monto:* ${datos['monto']:,.2f}\n"
+            f"- *Categoria (50/30/20):* {datos['categoria']}\n"
+            f"- *Concepto:* {datos['concepto']}\n"
+            f"- *Metodo:* {metodo}"
         )
         await mensaje_temporal.edit_text(mensaje_exito, parse_mode="Markdown")
     else:
@@ -94,7 +94,7 @@ async def recibir_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not archivo:
         return
 
-    mensaje_temporal = await update.message.reply_text("🎧 Procesando nota de voz con IA...")
+    mensaje_temporal = await update.message.reply_text("Procesando nota de voz con IA...")
 
     try:
         tg_file = await archivo.get_file()
@@ -103,10 +103,10 @@ async def recibir_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         datos = procesar_multimodal_ia(datos_bytes, mime_type=mime)
         if datos:
-            # Validación de exclusión para evitar duplicidad y no alterar regla 50/30/20
+            # Validacion de exclusion para evitar duplicidad y no alterar regla 50/30/20
             if datos.get("categoria") == "IGNORAR":
                 await mensaje_temporal.edit_text(
-                    "✅ Movimiento interno o ingreso ignorado correctamente (No afecta tu presupuesto 50/30/20)."
+                    "Movimiento interno o ingreso ignorado correctamente (No afecta tu presupuesto 50/30/20)."
                 )
                 return
 
@@ -119,13 +119,13 @@ async def recibir_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 metodo_pago=metodo,
                 tipo=tipo
             )
-            icono = "💵 *Ingreso registrado:*" if tipo == "Ingreso" else "✅ *Gasto registrado:*"
+            icono = "*Ingreso registrado:*" if tipo == "Ingreso" else "*Gasto registrado:*"
             mensaje_exito = (
                 f"{icono}\n"
-                f"💰 *Monto:* ${datos['monto']:,.2f}\n"
-                f"🏷️ *Categoría (50/30/20):* {datos['categoria']}\n"
-                f"📝 *Concepto:* {datos['concepto']}\n"
-                f"💳 *Método:* {metodo}"
+                f"- *Monto:* ${datos['monto']:,.2f}\n"
+                f"- *Categoria (50/30/20):* {datos['categoria']}\n"
+                f"- *Concepto:* {datos['concepto']}\n"
+                f"- *Metodo:* {metodo}"
             )
             await mensaje_temporal.edit_text(mensaje_exito, parse_mode="Markdown")
         else:
@@ -139,7 +139,7 @@ async def recibir_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _es_usuario_autorizado(update) or not update.message.photo:
         return
 
-    mensaje_temporal = await update.message.reply_text("📸 Analizando foto del recibo con IA...")
+    mensaje_temporal = await update.message.reply_text("Analizando foto del recibo con IA...")
 
     try:
         foto = update.message.photo[-1]
@@ -148,10 +148,10 @@ async def recibir_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         datos = procesar_multimodal_ia(datos_bytes, mime_type="image/jpeg")
         if datos:
-            # Validación de exclusión para evitar duplicidad y no alterar regla 50/30/20
+            # Validacion de exclusion para evitar duplicidad y no alterar regla 50/30/20
             if datos.get("categoria") == "IGNORAR":
                 await mensaje_temporal.edit_text(
-                    "✅ Movimiento interno o ingreso ignorado correctamente (No afecta tu presupuesto 50/30/20)."
+                    "Movimiento interno o ingreso ignorado correctamente (No afecta tu presupuesto 50/30/20)."
                 )
                 return
 
@@ -164,13 +164,13 @@ async def recibir_foto(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 metodo_pago=metodo,
                 tipo=tipo
             )
-            icono = "💵 *Ingreso registrado:*" if tipo == "Ingreso" else "✅ *Gasto registrado:*"
+            icono = "*Ingreso registrado:*" if tipo == "Ingreso" else "*Gasto registrado:*"
             mensaje_exito = (
                 f"{icono}\n"
-                f"💰 *Monto:* ${datos['monto']:,.2f}\n"
-                f"🏷️ *Categoría (50/30/20):* {datos['categoria']}\n"
-                f"📝 *Concepto:* {datos['concepto']}\n"
-                f"💳 *Método:* {metodo}"
+                f"- *Monto:* ${datos['monto']:,.2f}\n"
+                f"- *Categoria (50/30/20):* {datos['categoria']}\n"
+                f"- *Concepto:* {datos['concepto']}\n"
+                f"- *Metodo:* {metodo}"
             )
             await mensaje_temporal.edit_text(mensaje_exito, parse_mode="Markdown")
         else:
@@ -184,7 +184,7 @@ async def generar_grafico(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _es_usuario_autorizado(update):
         return
 
-    # Extraer de la base de datos el gasto neto (Gastos - Ingresos) del mes actual por categoría
+    # Extraer de la base de datos el gasto neto (Gastos - Ingresos) del mes actual por categoria
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -198,7 +198,7 @@ async def generar_grafico(update: Update, context: ContextTypes.DEFAULT_TYPE):
     datos_db = cursor.fetchall()
     conn.close()
 
-    # Si alguna de las 3 categorías no tiene datos en la consulta, asumirla matemáticamente como 0
+    # Si alguna de las 3 categorias no tiene datos en la consulta, asumirla matematicamente como 0
     gasto_neto = {"Necesidades": 0.0, "Gustos": 0.0, "Ahorro": 0.0}
     for cat, val in datos_db:
         if cat in gasto_neto:
@@ -208,15 +208,15 @@ async def generar_grafico(update: Update, context: ContextTypes.DEFAULT_TYPE):
     val_gustos = gasto_neto["Gustos"]
     val_ahorro = gasto_neto["Ahorro"]
 
-    # Valores para apilar en el gráfico
+    # Valores para apilar en el grafico
     w_nec = max(0.0, val_necesidades)
     w_gus = max(0.0, val_gustos)
     w_aho = max(0.0, val_ahorro)
 
-    # Crear una única barra horizontal usando plt.barh
+    # Crear una unica barra horizontal usando plt.barh
     fig, ax = plt.subplots(figsize=(9, 2.8))
 
-    # Apilar los valores usando el parámetro left:
+    # Apilar los valores usando el parametro left:
     # Necesidades empieza en 0 (#286EF0)
     # Gustos empieza donde termina Necesidades (#F59E0B)
     # Ahorro empieza donde termina Gustos (#10B981)
@@ -224,13 +224,13 @@ async def generar_grafico(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ax.barh(0, w_gus, left=w_nec, color='#F59E0B', label='Gustos ($720)')
     ax.barh(0, w_aho, left=w_nec + w_gus, color='#10B981', label='Ahorro ($480)')
 
-    # Fijar el límite del eje X estrictamente de 0 a 2400
+    # Fijar el limite del eje X estrictamente de 0 a 2400
     ax.set_xlim(0, 2400)
 
     # Ocultar el eje Y
     ax.set_yticks([])
 
-    # Título
+    # Titulo
     ax.set_title("Progreso del Ingreso Total: $2,400 MXN", fontsize=13, weight="bold", pad=12)
 
     # Leyenda en la parte inferior
@@ -248,7 +248,7 @@ async def generar_grafico(update: Update, context: ContextTypes.DEFAULT_TYPE):
     plt.savefig(ruta_imagen, dpi=150, bbox_inches='tight')
     plt.close(fig)
 
-    # Límite fijo menos el gasto neto calculado
+    # Limite fijo menos el gasto neto calculado
     limite_nec = 1200.0
     limite_gus = 720.0
     limite_aho = 480.0
@@ -259,17 +259,17 @@ async def generar_grafico(update: Update, context: ContextTypes.DEFAULT_TYPE):
     restante_total = restante_nec + restante_gus + restante_aho
 
     caption = (
-        "📊 *Progreso del Ingreso Total ($2,400 MXN)*\n\n"
-        f"🔵 *Necesidades ($1,200):*\n"
-        f"  • Gasto neto: ${val_necesidades:,.2f}\n"
-        f"  • Saldo restante: ${restante_nec:,.2f}\n\n"
-        f"🟡 *Gustos ($720):*\n"
-        f"  • Gasto neto: ${val_gustos:,.2f}\n"
-        f"  • Saldo restante: ${restante_gus:,.2f}\n\n"
-        f"🟢 *Ahorro ($480):*\n"
-        f"  • Gasto neto: ${val_ahorro:,.2f}\n"
-        f"  • Saldo restante: ${restante_aho:,.2f}\n\n"
-        f"💵 *Saldo restante total disponible:* ${restante_total:,.2f}"
+        "*Progreso del Ingreso Total ($2,400 MXN)*\n\n"
+        f"*Necesidades ($1,200):*\n"
+        f"  - Gasto neto: ${val_necesidades:,.2f}\n"
+        f"  - Saldo restante: ${restante_nec:,.2f}\n\n"
+        f"*Gustos ($720):*\n"
+        f"  - Gasto neto: ${val_gustos:,.2f}\n"
+        f"  - Saldo restante: ${restante_gus:,.2f}\n\n"
+        f"*Ahorro ($480):*\n"
+        f"  - Gasto neto: ${val_ahorro:,.2f}\n"
+        f"  - Saldo restante: ${restante_aho:,.2f}\n\n"
+        f"*Saldo restante total disponible:* ${restante_total:,.2f}"
     )
 
     try:
@@ -285,7 +285,7 @@ async def generar_grafico(update: Update, context: ContextTypes.DEFAULT_TYPE):
             os.remove(ruta_imagen)
 
 async def tarea_revisar_correos(context: ContextTypes.DEFAULT_TYPE):
-    """Tarea periódica de fondo para leer correos bancarios y procesarlos con IA."""
+    """Tarea periodica de fondo para leer correos bancarios y procesarlos con IA."""
     if MI_CHAT_ID == 0:
         return
 
@@ -298,7 +298,7 @@ async def tarea_revisar_correos(context: ContextTypes.DEFAULT_TYPE):
 
             datos = procesar_texto_ia(correo["texto_completo"])
             if datos:
-                # Regla de exclusión para correos bancarios (ej. pagos a tarjeta Nu, depósitos de sueldo)
+                # Regla de exclusion para correos bancarios (ej. pagos a tarjeta Nu, depositos de sueldo)
                 if datos.get("categoria") == "IGNORAR":
                     logger.info(f"Correo {correo['id']} ignorado correctamente (pago a tarjeta / transferencia / ingreso regular).")
                     continue
@@ -314,13 +314,13 @@ async def tarea_revisar_correos(context: ContextTypes.DEFAULT_TYPE):
                     identificador_externo=identificador
                 )
                 if insertado:
-                    icono = "💵 *Ingreso detectado en correo bancario:*" if tipo == "Ingreso" else "📥 *Gasto detectado en correo bancario:*"
+                    icono = "*Ingreso detectado en correo bancario:*" if tipo == "Ingreso" else "*Gasto detectado en correo bancario:*"
                     mensaje = (
                         f"{icono}\n"
-                        f"💰 *Monto:* ${datos['monto']:,.2f}\n"
-                        f"🏷️ *Categoría:* {datos['categoria']}\n"
-                        f"📝 *Concepto:* {datos['concepto']}\n"
-                        f"💳 *Método:* {metodo}"
+                        f"- *Monto:* ${datos['monto']:,.2f}\n"
+                        f"- *Categoria:* {datos['categoria']}\n"
+                        f"- *Concepto:* {datos['concepto']}\n"
+                        f"- *Metodo:* {metodo}"
                     )
                     await context.bot.send_message(
                         chat_id=MI_CHAT_ID,
@@ -328,13 +328,13 @@ async def tarea_revisar_correos(context: ContextTypes.DEFAULT_TYPE):
                         parse_mode="Markdown"
                     )
     except Exception as e:
-        logger.error(f"Error en tarea periódica de correos: {e}", exc_info=True)
+        logger.error(f"Error en tarea periodica de correos: {e}", exc_info=True)
 
 def iniciar_bot():
-    """Configura y arranca el bot de Telegram junto con tareas periódicas."""
+    """Configura y arranca el bot de Telegram junto con tareas periodicas."""
     if not TELEGRAM_TOKEN or MI_CHAT_ID == 0:
         logger.error("Faltan credenciales de Telegram (TELEGRAM_TOKEN o TELEGRAM_CHAT_ID) en .env")
-        print("❌ Error: Debes configurar TELEGRAM_TOKEN y TELEGRAM_CHAT_ID en tu archivo .env")
+        print("Error: Debes configurar TELEGRAM_TOKEN y TELEGRAM_CHAT_ID en tu archivo .env")
         return
 
     app = Application.builder().token(TELEGRAM_TOKEN).build()
@@ -350,7 +350,7 @@ def iniciar_bot():
     app.add_handler(MessageHandler(filters.PHOTO, recibir_foto))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_gasto))
 
-    # Tarea de fondo para IMAP si están configuradas las credenciales
+    # Tarea de fondo para IMAP si estan configuradas las credenciales
     if app.job_queue and os.getenv("IMAP_USER") and os.getenv("IMAP_PASSWORD"):
         intervalo_minutos = int(os.getenv("IMAP_CHECK_INTERVAL_MINUTES", "5"))
         app.job_queue.run_repeating(
@@ -358,9 +358,9 @@ def iniciar_bot():
             interval=intervalo_minutos * 60,
             first=15
         )
-        logger.info(f"Revisión de correos IMAP activada cada {intervalo_minutos} minutos.")
+        logger.info(f"Revision de correos IMAP activada cada {intervalo_minutos} minutos.")
     else:
-        logger.info("Revisión de correos IMAP desactivada (faltan credenciales IMAP_USER / IMAP_PASSWORD).")
+        logger.info("Revision de correos IMAP desactivada (faltan credenciales IMAP_USER / IMAP_PASSWORD).")
 
-    print("🤖 Bot de Telegram 'Hermes' iniciado correctamente...")
+    print("Bot de Telegram 'Hermes' iniciado correctamente...")
     app.run_polling()

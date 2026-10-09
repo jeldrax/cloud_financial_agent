@@ -40,7 +40,7 @@ Debes extraer obligatoriamente las siguientes 4 llaves en el JSON:
 3. "categoria" (string): Debe ser EXACTAMENTE una de estas opciones: "Necesidades", "Gustos", "Ahorro" o "IGNORAR".
 4. "tipo" (string): Debe ser EXACTAMENTE "Gasto" o "Ingreso".
 
-🚨 REGLA DE MÁXIMA PRIORIDAD - EXCLUSIÓN Y DUPLICIDAD ('IGNORAR'):
+REGLA DE MAXIMA PRIORIDAD - EXCLUSION Y DUPLICIDAD ('IGNORAR'):
 Debes devolver el JSON con la llave 'categoria' fijada ESTRICTAMENTE en "IGNORAR" cuando el texto o correo trate sobre:
 - Recibir ingresos, sueldo, salario o depósitos regulares (ej. depósitos semanales de $600 en Mercado Pago, quincenas o transferencias recibidas de nómina).
 - Fondeo de cuentas, retiros propios o transferencias entre cuentas del propio usuario (ej. transferencias entre Mercado Pago, Nu, BBVA, etc.).

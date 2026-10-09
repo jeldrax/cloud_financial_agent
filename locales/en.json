@@ -1,11 +1,11 @@
 {
-  "processing": "⏳ Processing your expense with AI...",
-  "unauthorized": "⛔ Access denied. This bot is private.",
-  "report_empty": "📊 No transactions recorded yet.",
+  "processing": "Processing with AI...",
+  "unauthorized": "Access denied. This bot is private.",
+  "report_empty": "No transactions recorded yet.",
   "report_title": "Expense Distribution by Category",
-  "expense_saved": "✅ *Expense recorded:*\n💰 *Amount:* ${monto:.2f}\n🏷️ *Category:* {categoria}\n📝 *Description:* {concepto}\n💳 *Method:* {metodo_pago}",
-  "expense_email_saved": "📥 *Expense detected from bank email:*\n💰 *Amount:* ${monto:.2f}\n🏷️ *Category:* {categoria}\n📝 *Description:* {concepto}\n💳 *Method:* {metodo_pago}",
-  "expense_error": "❌ Could not extract expense details. Please make sure to include amount and description.",
-  "welcome": "👋 Hello! I am your *Autonomous Financial Agent*.\n\nYou can send me your expenses via text (e.g. _'Bought coffee for $4.50 at Starbucks'_) or request reports.\n\nCommands:\n/reporte - Expense distribution chart\n/ayuda - View help",
-  "help": "📌 *Available commands:*\n• Send any text describing an expense.\n• `/reporte` - Generate a pie chart of your expenses.\n• `/ayuda` - Show this help message."
+  "expense_saved": "*Expense recorded:*\n- *Amount:* ${monto:.2f}\n- *Category:* {categoria}\n- *Description:* {concepto}\n- *Method:* {metodo_pago}",
+  "expense_email_saved": "*Expense detected from bank email:*\n- *Amount:* ${monto:.2f}\n- *Category:* {categoria}\n- *Description:* {concepto}\n- *Method:* {metodo_pago}",
+  "expense_error": "Could not extract transaction details. Please make sure to include amount and description.",
+  "welcome": "Hello. I am your Autonomous Financial Agent.\n\nYou can send me your transactions via text (e.g. _'Bought coffee for $4.50 at Starbucks'_), voice note or receipt photo.\n\nCommands:\n/reporte - 50/30/20 budget chart\n/ayuda - View options",
+  "help": "*Available commands:*\n- Send any transaction (text, voice note or photo).\n- `/reporte` - Generate a 50/30/20 budget chart.\n- `/ayuda` - Show this help message."
 }
