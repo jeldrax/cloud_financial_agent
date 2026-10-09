@@ -1,4 +1,4 @@
-# Cloud Financial Agent (Hermes)
+# Cloud Financial Agent
 
 Agente financiero autonomo y self-hosted disenado para registrar, clasificar y monitorear ingresos y gastos bajo la metodologia presupuestal 50/30/20. Utiliza la API de Google Gemini (procesamiento multimodal estructurado), un bot privado de Telegram como interfaz de usuario, ingesta automatizada de correos bancarios via IMAP, almacenamiento local en SQLite y visualizacion en Grafana mediante Docker.
 
