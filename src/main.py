@@ -1,9 +1,15 @@
 import sys
+import os
 import logging
 from dotenv import load_dotenv
 
-# Cargar variables de entorno desde .env
-load_dotenv()
+# Asegurar que el directorio raíz del proyecto esté en sys.path
+DIRECTORIO_RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if DIRECTORIO_RAIZ not in sys.path:
+    sys.path.insert(0, DIRECTORIO_RAIZ)
+
+# Cargar variables de entorno desde .env ubicado en la raíz
+load_dotenv(os.path.join(DIRECTORIO_RAIZ, ".env"))
 
 from src.database import init_db
 from src.tg_bot import iniciar_bot
