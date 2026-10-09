@@ -220,9 +220,9 @@ async def generar_grafico(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Necesidades empieza en 0 (#286EF0)
     # Gustos empieza donde termina Necesidades (#F59E0B)
     # Ahorro empieza donde termina Gustos (#10B981)
-    ax.barh(0, w_nec, color='#286EF0', label='Necesidades ($1,200)')
-    ax.barh(0, w_gus, left=w_nec, color='#F59E0B', label='Gustos ($720)')
-    ax.barh(0, w_aho, left=w_nec + w_gus, color='#10B981', label='Ahorro ($480)')
+    ax.barh(0, w_nec, color='#286EF0', label=r'Necesidades (\$1,200)')
+    ax.barh(0, w_gus, left=w_nec, color='#F59E0B', label=r'Gustos (\$720)')
+    ax.barh(0, w_aho, left=w_nec + w_gus, color='#10B981', label=r'Ahorro (\$480)')
 
     # Fijar el limite del eje X estrictamente de 0 a 2400
     ax.set_xlim(0, 2400)
@@ -231,7 +231,7 @@ async def generar_grafico(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ax.set_yticks([])
 
     # Titulo
-    ax.set_title("Progreso del Ingreso Total: $2,400 MXN", fontsize=13, weight="bold", pad=12)
+    ax.set_title(r"Progreso del Ingreso Total: \$2,400 MXN", fontsize=13, weight="bold", pad=12)
 
     # Leyenda en la parte inferior
     ax.legend(

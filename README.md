@@ -222,6 +222,32 @@ Puedes interactuar con el bot de forma natural utilizando cualquiera de los sigu
 - `/reporte` - Genera y envia el grafico de barra horizontal apilada con el progreso del mes y el balance neto.
 - `/ayuda` - Muestra la guia rapida de comandos.
 
+### Visualizacion del Progreso Presupuestal
+
+Al solicitar el comando `/reporte`, el agente calcula el gasto neto acumulado en el mes (`Gastos - Ingresos`) para cada una de las tres categorias y genera una barra horizontal apilada con los limites presupuestales correspondientes:
+
+![Progreso del Ingreso Total 50/30/20](docs/images/grafico_50_30_20.png)
+
+Junto a la imagen, el bot envia el desglose textual exacto del saldo disponible:
+
+```text
+*Progreso del Ingreso Total ($2,400 MXN)*
+
+*Necesidades ($1,200):*
+  - Gasto neto: $680.00
+  - Saldo restante: $520.00
+
+*Gustos ($720):*
+  - Gasto neto: $350.00
+  - Saldo restante: $370.00
+
+*Ahorro ($480):*
+  - Gasto neto: $240.00
+  - Saldo restante: $240.00
+
+*Saldo restante total disponible:* $1,130.00
+```
+
 ---
 
 ## Configuracion de Grafana
