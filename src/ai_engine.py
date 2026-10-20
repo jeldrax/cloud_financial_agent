@@ -43,9 +43,9 @@ Debes extraer obligatoriamente las siguientes 4 llaves en el JSON:
 REGLA DE MAXIMA PRIORIDAD - EXCLUSION Y DUPLICIDAD ('IGNORAR'):
 Debes devolver el JSON con la llave 'categoria' fijada ESTRICTAMENTE en "IGNORAR" cuando el texto o correo trate sobre:
 - Recibir ingresos, sueldo, salario o depósitos regulares (ej. depósitos semanales de $600 en Mercado Pago, quincenas o transferencias recibidas de nómina).
-- Fondeo de cuentas, retiros propios o transferencias entre cuentas del propio usuario (ej. transferencias entre Mercado Pago, Nu, BBVA, etc.).
-- PAGOS A LA TARJETA DE CRÉDITO (ej. "pago recibido en Nu", "pagaste tu tarjeta", transferencias de Mercado Pago a Nu para liquidar deuda o tarjeta de crédito).
-*NOTA CRÍTICA PARA EL LLM*: Los gastos reales hechos CON la tarjeta de crédito (ej. compras en tiendas, restaurantes, gasolina, servicios con tarjeta Nu o Mercado Pago) SÍ deben clasificarse normalmente en "Necesidades", "Gustos" o "Ahorro". SOLO se ignoran los pagos para liquidar o pagar la tarjeta de crédito.
+- Fondeo de cuentas, retiros propios o transferencias entre cuentas del propio usuario (ej. transferencias entre Mercado Pago, Nu, Banorte, BBVA, o cualquier transferencia donde el destinatario/beneficiario sea el propio titular: "Pablo", "Pablo Paredes", "Pablo Paredes C", "Pablo Esteban Paredes Canche" o "yoPablo").
+- PAGOS A LA TARJETA DE CRÉDITO (ej. "pago recibido en Nu", "pagaste tu tarjeta", transferencias de Mercado Pago o Banorte a Nu para liquidar deuda o tarjeta de crédito).
+*NOTA CRÍTICA PARA EL LLM*: Los gastos reales hechos CON la tarjeta de crédito (ej. compras en tiendas, restaurantes, gasolina, servicios con tarjeta Nu o Mercado Pago) SÍ deben clasificarse normalmente en "Necesidades", "Gustos" o "Ahorro". SOLO se ignoran los pagos para liquidar o pagar la tarjeta de crédito y las transferencias entre cuentas propias.
 
 REGLA PARA LA LLAVE 'tipo':
 - "Gasto": Si el texto habla de comprar, pagar o cargos (compras en comercios, consumo de bienes o servicios).

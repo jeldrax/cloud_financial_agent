@@ -4,9 +4,10 @@ venv/
 __pycache__/
 *.pyc
 
-# Variables de entorno y secretos (nunca subir)
+# Variables de entorno y secretos (nunca subir - Zero-Trust / Envied)
 .env
 .env.*
+*.env.g.dart
 !.env.example
 
 # Bases de datos locales
@@ -18,3 +19,21 @@ data/*.db
 *.log
 temp_chart.png
 .pytest_cache/
+
+# Flutter / Dart / Android / Linux build artifacts
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.apk
+*.aab
+.idea/
+*.iml
+android/.gradle/
+android/captures/
+android/local.properties
+android/key.properties
+*.jks
+*.keystore
+linux/flutter/ephemeral/

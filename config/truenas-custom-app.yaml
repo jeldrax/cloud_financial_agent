@@ -1,0 +1,38 @@
+# ==============================================================================
+# Plantilla para TrueNAS SCALE (Electric Eel 24.10+ -> Apps -> Install via YAML)
+# Reemplaza `/mnt/tank/apps/cloud_financial_agent` por la ruta real de tu Pool/Dataset
+# ==============================================================================
+
+services:
+  agente:
+    build:
+      context: /mnt/tank/apps/cloud_financial_agent
+      dockerfile: Dockerfile
+    image: cloud-financial-agent:latest
+    container_name: hermes_financiero
+    restart: unless-stopped
+    env_file:
+      - /mnt/tank/apps/cloud_financial_agent/.env
+    environment:
+      - TZ=America/Mexico_City
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - /mnt/tank/apps/cloud_financial_agent/data:/app/data
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_homelab
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - TZ=America/Mexico_City
+      - GF_INSTALL_PLUGINS=frser-sqlite-datasource
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - /mnt/tank/apps/cloud_financial_agent/grafana:/var/lib/grafana
+      - /mnt/tank/apps/cloud_financial_agent/data:/var/lib/grafana/data:ro

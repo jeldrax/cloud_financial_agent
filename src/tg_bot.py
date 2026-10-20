@@ -311,7 +311,8 @@ async def tarea_revisar_correos(context: ContextTypes.DEFAULT_TYPE):
                     categoria=datos["categoria"],
                     metodo_pago=metodo,
                     tipo=tipo,
-                    identificador_externo=identificador
+                    identificador_externo=identificador,
+                    fecha=correo.get("fecha_sql")
                 )
                 if insertado:
                     icono = "*Ingreso detectado en correo bancario:*" if tipo == "Ingreso" else "*Gasto detectado en correo bancario:*"

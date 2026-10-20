@@ -33,7 +33,8 @@ def insertar_gasto(
     categoria: str,
     metodo_pago: str,
     tipo: str = "Gasto",
-    identificador_externo: Optional[str] = None
+    identificador_externo: Optional[str] = None,
+    fecha: Optional[str] = None
 ) -> bool:
     """
     Inserta una transacción (Gasto o Ingreso) en la base de datos.
@@ -42,13 +43,22 @@ def insertar_gasto(
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     try:
-        cursor.execute(
-            """
-            INSERT INTO transacciones (monto, concepto, categoria, metodo_pago, tipo, identificador_externo)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (monto, concepto, categoria, metodo_pago, tipo, identificador_externo)
-        )
+        if fecha:
+            cursor.execute(
+                """
+                INSERT INTO transacciones (fecha, monto, concepto, categoria, metodo_pago, tipo, identificador_externo)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (fecha, monto, concepto, categoria, metodo_pago, tipo, identificador_externo)
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT INTO transacciones (monto, concepto, categoria, metodo_pago, tipo, identificador_externo)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (monto, concepto, categoria, metodo_pago, tipo, identificador_externo)
+            )
         conn.commit()
         return True
     except sqlite3.IntegrityError:
@@ -100,3 +110,21 @@ def obtener_gastos_por_categoria() -> List[Tuple[str, float]]:
     datos = cursor.fetchall()
     conn.close()
     return datos
+
+def obtener_transacciones_recientes(limite: int = 50) -> List[dict]:
+    """Devuelve las transacciones más recientes como lista de diccionarios para la API REST."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id, fecha, monto, concepto, categoria, metodo_pago, tipo, identificador_externo
+        FROM transacciones
+        ORDER BY datetime(fecha) DESC, id DESC
+        LIMIT ?
+        """,
+        (limite,)
+    )
+    filas = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return filas

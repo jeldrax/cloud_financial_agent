@@ -1,0 +1,35 @@
+# Entornos virtuales y cachés de Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+tests/
+
+# Archivos de control de versiones y secretos locales
+.git/
+.gitignore
+.env
+.env.*
+
+# Persistencia local de SQLite (se monta por volumen en /app/data)
+data/
+*.db
+*.sqlite3
+
+# Código del frontend Flutter y artefactos de compilación
+lib/
+build/
+.dart_tool/
+android/
+ios/
+linux/
+web/
+windows/
+macos/
+pubspec.yaml
+pubspec.lock
+
+# Documentación
+docs/
+README.md

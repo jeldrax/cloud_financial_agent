@@ -1,27 +1,33 @@
-version: '3.8'
-
 services:
   agente:
     build: .
+    image: cloud-financial-agent:latest
     container_name: hermes_financiero
     restart: unless-stopped
     env_file: .env
+    environment:
+      - TZ=${TZ:-America/Mexico_City}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    ports:
+      - "${API_PORT:-8000}:8000"
     volumes:
-      - ./data:/app/data
+      - ${TRUENAS_DATA_PATH:-./data}:/app/data
 
   grafana:
     image: grafana/grafana:latest
     container_name: grafana_homelab
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT:-3000}:3000"
     environment:
+      - TZ=${TZ:-America/Mexico_City}
       - GF_INSTALL_PLUGINS=frser-sqlite-datasource
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./data:/var/lib/grafana/data:ro
+      - ${TRUENAS_DATA_PATH:-./data}:/var/lib/grafana/data:ro
 
 volumes:
   grafana_data:
