@@ -1,308 +1,344 @@
-# Cloud Financial Agent
+# Cloud Financial Agent (Hermes) 🏛️💰
 
-Agente financiero autonomo y self-hosted disenado para registrar, clasificar y monitorear ingresos y gastos bajo la metodologia presupuestal 50/30/20. Utiliza la API de Google Gemini (procesamiento multimodal estructurado), un bot privado de Telegram como interfaz de usuario, ingesta automatizada de correos bancarios via IMAP, almacenamiento local en SQLite y visualizacion en Grafana mediante Docker.
+Sistema integral y autónomo de finanzas personales *self-hosted* basado en la metodología presupuestal **50/30/20**. Integra un **backend inteligente en Python (FastAPI + Google Gemini API + Gmail IMAP + SQLite + Telegram Bot)** desplegado en servidor **TrueNAS SCALE** y un **frontend multiplataforma en Flutter** para **Android (Samsung Galaxy S23 Ultra, Galaxy Tab S7 FE)** y **Linux Desktop (CachyOS / KDE Plasma)** con arquitectura de seguridad **Zero-Trust**.
 
 ---
 
-## Tabla de Contenidos
+## 📑 Tabla de Contenidos
 
-- [Caracteristicas Principales](#caracteristicas-principales)
-- [Arquitectura y Metodologia](#arquitectura-y-metodologia)
+- [Visión General del Sistema](#-visión-general-del-sistema)
+- [Arquitectura y Metodología](#-arquitectura-y-metodología)
   - [Regla Presupuestal 50/30/20](#regla-presupuestal-503020)
-  - [Reglas de Exclusion Antiduplicidad](#reglas-de-exclusion-antiduplicidad)
-  - [Blindaje de Seguridad](#blindaje-de-seguridad)
-- [Stack Tecnologico](#stack-tecnologico)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Requisitos Previos](#requisitos-previos)
-- [Instalacion y Configuracion](#instalacion-y-configuracion)
-  - [1. Clonar el Repositorio](#1-clonar-el-repositorio)
-  - [2. Variables de Entorno](#2-variables-de-entorno)
-  - [3. Ejecucion Local](#3-ejecucion-local)
-- [Despliegue en Homelab / TrueNAS](#despliegue-en-homelab--truenas)
-- [Uso del Bot de Telegram](#uso-del-bot-de-telegram)
-  - [Canales de Entrada](#canales-de-entrada)
-  - [Comandos Disponibles](#comandos-disponibles)
-- [Configuracion de Grafana](#configuracion-de-grafana)
-  - [Consultas SQL de Ejemplo](#consultas-sql-de-ejemplo)
-- [Licencia y Contribuciones](#licencia-y-contribuciones)
+  - [Reglas de Exclusión Antiduplicidad (Banorte, Nu, Mercado Pago)](#reglas-de-exclusión-antiduplicidad)
+  - [Seguridad Zero-Trust y Bóveda Biométrica](#seguridad-zero-trust-y-bóveda-biométrica)
+- [Stack Tecnológico](#-stack-tecnológico)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Guía Paso a Paso de Instalación y Configuración](#-guía-paso-a-paso-de-instalación-y-configuración)
+  - [Paso 1: Obtención de Llaves y Credenciales](#paso-1-obtención-de-llaves-y-credenciales)
+  - [Paso 2: Configuración de Gmail (2FA, Contraseña de App y Filtros)](#paso-2-configuración-de-gmail)
+  - [Paso 3: Despliegue en Servidor TrueNAS SCALE / Homelab](#paso-3-despliegue-en-servidor-truenas-scale--homelab)
+  - [Paso 4: Instalación en Dispositivos Clientes](#paso-4-instalación-en-dispositivos-clientes)
+    - [Android (Samsung Galaxy S23 Ultra / Galaxy Tab S7 FE)](#a-android-samsung-galaxy-s23-ultra-y-galaxy-tab-s7-fe)
+    - [Linux Desktop (CachyOS / Arch / Ubuntu / KDE Plasma)](#b-linux-desktop-cachyos--kde-plasma)
+- [Uso y Pruebas del Sistema](#-uso-y-pruebas-del-sistema)
+  - [Panel de Diagnóstico de Gmail IMAP y Cuentas](#panel-de-diagnóstico-de-gmail-imap-y-cuentas)
+  - [Ingesta por Voz, Texto y Notificaciones Bancarias](#ingesta-por-voz-texto-y-notificaciones-bancarias)
+  - [Bot de Telegram y Visualización en Grafana](#bot-de-telegram-y-visualización-en-grafana)
+- [Pruebas Automatizadas y CI/CD](#-pruebas-automatizadas-y-cicd)
+- [Licencia](#-licencia)
 
 ---
 
-## Caracteristicas Principales
+## 🌟 Visión General del Sistema
 
-- **Ingesta Multimodal:** Procesa gastos e ingresos a partir de texto libre, notas de voz (audio OGG/MP3) y fotografias de tickets o recibos de compra.
-- **Ingesta Bancaria via IMAP:** Monitorea una bandeja de correo para extraer automaticamente notificaciones bancarias con deduplicacion por identificador unico.
-- **Clasificacion Estricta 50/30/20:** Cada movimiento es clasificado exclusivamente en Necesidades, Gustos o Ahorro mediante esquemas estructurados de Pydantic.
-- **Deteccion Inteligente de Gastos vs. Ingresos:** Distingue si una transaccion representa una salida o una entrada de dinero para calcular el gasto neto mensual.
-- **Regla de Exclusion para Movimientos Internos:** Detecta y omite transferencias entre cuentas propias, pagos a tarjetas de credito (Nu, Mercado Pago) y depositos de sueldo recurrentes para evitar duplicidad.
-- **Visualizacion Grafica en Telegram:** Genera un grafico de barra horizontal apilada con los limites presupuestales y el saldo restante por categoria.
-- **Privacidad y Aislamiento:** Todo se almacena localmente en SQLite. No se comparten datos financieros con servicios de analitica de terceros.
+```
+                      ┌──────────────────────────────────────────────┐
+                      │          Notificaciones Bancarias            │
+                      │  (Banorte, Mercado Pago, Nu, BBVA, etc.)     │
+                      └──────────────────────┬───────────────────────┘
+                                             │ IMAP SSL / Webhook
+                                             ▼
+┌───────────────────────────┐      ┌────────────────────────────────────────────────────────┐
+│   Dispositivos Clientes   │      │                  TrueNAS SCALE Homelab                 │
+│                           │      │                                                        │
+│ • S23 Ultra (Android APK) │◄────►│  • FastAPI REST API (Bearer Auth Zero-Trust / Port 8000)│
+│ • Tab S7 FE (Tablet)      │ Tail-│  • Motor Gemini Multimodal (Esquemas Pydantic 50/30/20)│
+│ • CachyOS (Linux Desktop) │ scale│  • Monitor IMAP Banca_Agente con Deduplicación Única   │
+│   (Bóveda Biométrica +    │      │  • SQLite3 (Persistencia local en data/gastos.db)       │
+│    Starfield Dark Theme)  │      │  • Telegram Bot Polling (Reportes y Gráficos)          │
+└───────────────────────────┘      │  • Grafana Homelab (Dashboards Analíticos / Port 3000)  │
+                                   └────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Arquitectura y Metodologia
+## 📐 Arquitectura y Metodología
 
 ### Regla Presupuestal 50/30/20
+Cada movimiento financiero se clasifica automáticamente con un esquema estructurado:
+1. **Necesidades (50%):** Vivienda, despensa esencial, servicios públicos, educación, salud y transporte obligatorio.
+2. **Gustos (30%):** Salidas, restaurantes, streaming, pasatiempos, compras personales y ocio.
+3. **Ahorro (20%):** Fondo de emergencia, inversiones, amortización de capital o ahorro programado.
 
-El sistema implementa de forma nativa la distribucion financiera 50/30/20:
+### Reglas de Exclusión Antiduplicidad
+Para evitar contabilizar dos veces el dinero o inflar falsamente los egresos:
+- **Transferencias entre cuentas propias:** Movimientos entre tus cuentas (ej. transferir de Banorte a Mercado Pago a nombre de *Pablo Esteban Paredes Canche*) se marcan como `IGNORAR`.
+- **Pagos de tarjetas de crédito:** Liquidar la tarjeta Nu o Banorte se ignora; lo que se contabiliza son las compras individuales que generaron ese saldo.
+- **Depósitos salariales regulares:** Financian el presupuesto base mensual y no se suman como gasto invertido.
 
-1. **Necesidades (50%):** Gastos basicos indispensables para vivir o trabajar (vivienda, servicios publicos, despensa esencial, salud, educacion y transporte obligatorio).
-2. **Gustos (30%):** Gastos de estilo de vida, salidas a comer, entretenimiento, suscripciones de streaming/ocio y compras no esenciales.
-3. **Ahorro (20%):** Fondos de emergencia, aportaciones a instrumentos de inversion, retiro o amortizacion de deuda.
-
-### Reglas de Exclusion Antiduplicidad
-
-Para evitar la doble contabilizacion en el presupuesto, el motor de inteligencia artificial aplica la categoria `IGNORAR` a las siguientes operaciones:
-
-- **Pagos a tarjetas de credito:** Liquidaciones o abonos a lineas de credito (ej. pagar la tarjeta Nu desde Mercado Pago). Las compras reales hechas con la tarjeta si se contabilizan; el pago de la tarjeta se omite.
-- **Transferencias entre cuentas propias:** Movimientos entre cuentas de debito, ahorros o billeteras digitales del mismo usuario.
-- **Ingresos regulares o sueldo:** Depositos semanales o quincenales de salario que fondean el presupuesto base.
-
-Al detectar esta condicion, el bot notifica que el movimiento fue ignorado y no realiza escrituras en la base de datos.
-
-### Blindaje de Seguridad
-
-- **Validacion de Identidad:** El bot rechaza silenciosamente cualquier solicitud proveniente de un `chat_id` distinto al autorizado en la configuracion.
-- **Defensas Anti-Prompt Injection:** Las entradas de usuario y los textos de correo se tratan estrictamente como datos crudos no confiables dentro de delimitadores XML (`<texto_analizar>`), impidiendo la ejecucion de instrucciones maliciosas en el modelo de lenguaje.
-- **Esquema Tipado Estricto:** Se utiliza Pydantic con literales de tipo para forzar a la API a devolver unicamente formatos JSON validos y deterministas.
+### Seguridad Zero-Trust y Bóveda Biométrica
+- **Sin Secretos en Git:** Las credenciales del cliente Flutter se inyectan en tiempo de compilación con `envied` ofuscadas en binario. Nunca se suben archivos `.env` ni `*.env.g.dart`.
+- **Bóveda Biométrica Local:** En Android y Linux, al pasar la app a segundo plano (`AppLifecycleState.paused` o `hidden`), la pantalla se bloquea inmediatamente exigiendo huella dactilar, biometría facial o credenciales de sistema (`local_auth`) para volver a ingresar.
+- **Red Privada Tailscale:** Comunicación cifrada de extremo a extremo sin exponer puertos hacia Internet en el router.
+- **Autenticación en Tiempo Constante:** El backend FastAPI valida el Bearer token con `secrets.compare_digest` para neutralizar ataques de tiempo (*timing attacks*).
 
 ---
 
-## Stack Tecnologico
+## 🛠️ Stack Tecnológico
 
-- **Lenguaje:** Python 3.11+
-- **Modelo de IA:** Google Gemini API (`google-genai`)
-- **Interfaz:** `python-telegram-bot` (modo polling asincrono y job queue)
-- **Base de Datos:** SQLite 3
-- **Graficacion:** Matplotlib (backend headless `Agg`)
-- **Contenedores:** Docker y Docker Compose
-- **Analitica Homelab:** Grafana con plugin `frser-sqlite-datasource`
+| Capa | Tecnologías |
+| :--- | :--- |
+| **Backend & API** | Python 3.11+, FastAPI, Pydantic v2, Uvicorn |
+| **Inteligencia Artificial** | Google Gemini API (`gemini-2.5-flash` / `gemini-1.5-flash`) estructurado con JSON Schema |
+| **Ingesta de Correo** | Python `imaplib`, `email` RFC 2822 parser con filtrado inteligente previo |
+| **Frontend Multiplataforma** | Flutter 3.47+, Dart 3.11+, Material 3 Starfield Dark Theme |
+| **Seguridad de Cliente** | `envied`, `local_auth` (Biometría Android/Linux) |
+| **Audio & Notificaciones** | `record: ^7.1.2`, Webhooks SHA-256 idempotentes |
+| **Almacenamiento** | SQLite 3 (`WAL mode`), índices optimizados de fecha y hash |
+| **Infraestructura** | Docker Compose, TrueNAS SCALE, Tailscale VPN, Grafana |
 
 ---
 
-## Estructura del Proyecto
+## 📂 Estructura del Proyecto
 
 ```text
 cloud_financial_agent/
-├── config/                  # Configuraciones adicionales
-├── data/                    # Directorio de persistencia de SQLite (gastos.db)
-├── locales/                 # Archivos de internacionalizacion (es.json, en.json)
-├── src/
-│   ├── __init__.py
-│   ├── ai_engine.py         # Integracion con Gemini, esquemas y prompts
-│   ├── database.py          # Esquema de SQLite, indices y consultas netas
-│   ├── i18n.py              # Gestor de traducciones dinamicas
-│   ├── mail_parser.py       # Lector IMAP de notificaciones bancarias
-│   ├── main.py              # Orquestador y punto de entrada de la aplicacion
-│   └── tg_bot.py            # Manejadores de comandos, mensajes y graficos
-├── .env.example             # Plantilla de variables de entorno
-├── .gitignore               # Exclusion estricta de secretos y bases de datos
-├── docker-compose.yml       # Orquestacion del agente y Grafana
-├── Dockerfile               # Construccion de la imagen del agente
-├── README.md                # Documentacion del proyecto
-└── requirements.txt         # Dependencias de Python
+├── android/                   # Proyecto nativo Android (S23 Ultra / Tab S7 FE)
+│   ├── app/build.gradle.kts   # Configuración de compilación, permisos y MinSDK 24
+│   └── app/src/main/          # MainActivity (FlutterFragmentActivity) y Manifest
+├── linux/                     # Proyecto nativo Linux (CachyOS / Arch / Ubuntu)
+│   ├── CMakeLists.txt         # Integración GTK3 y plugins nativos
+│   └── runner/                # Punto de entrada C++ de la aplicación de escritorio
+├── lib/                       # Código fuente multiplataforma en Flutter
+│   ├── core/
+│   │   ├── config/            # Envied Zero-Trust (env.dart)
+│   │   └── network/           # ApiClient (HTTP Bearer client + Tailscale)
+│   ├── modules/
+│   │   ├── auth/              # Bóveda biométrica (BiometricLockView)
+│   │   ├── dashboard/         # Pantalla principal 50/30/20 adaptativa
+│   │   ├── settings/          # Panel de diagnóstico Gmail IMAP y configuración
+│   │   └── transactions/      # Ingesta por voz, texto y webhooks bancarios
+│   └── main.dart              # Inicializador global y observador de ciclo de vida
+├── src/                       # Backend en Python
+│   ├── ai_engine.py           # Prompts del sistema, reglas antiduplicidad y Gemini
+│   ├── api.py                 # Servidor FastAPI REST (Bearer Auth)
+│   ├── database.py            # Esquema SQLite, migraciones e histórico de gastos
+│   ├── mail_parser.py         # Lector IMAP de notificaciones y panel diagnóstico
+│   ├── main.py                # Orquestador del servicio backend
+│   └── tg_bot.py              # Bot de Telegram con gráficos Matplotlib
+├── tests/
+│   └── test_api.py            # Suite de pruebas unitarias y de integración
+├── scripts/
+│   └── deploy_truenas.sh      # Script de despliegue automatizado para TrueNAS SCALE
+├── docker-compose.yml         # Orquestación de backend y Grafana
+├── Dockerfile                 # Imagen Docker optimizada para producción
+└── pubspec.yaml               # Dependencias de Flutter
 ```
 
 ---
 
-## Requisitos Previos
+## 🚀 Guía Paso a Paso de Instalación y Configuración
 
-Antes de iniciar el despliegue, asegurate de contar con:
+### Paso 1: Obtención de Llaves y Credenciales
 
-1. **Token de Bot de Telegram:** Obtenido a traves de [@BotFather](https://t.me/BotFather).
-2. **Chat ID de Telegram:** Tu identificador numerico personal, obtenido en [@userinfobot](https://t.me/userinfobot).
-3. **API Key de Google Gemini:** Clave gratuita generada en [Google AI Studio](https://aistudio.google.com/).
-4. **(Opcional) Credenciales IMAP:** Correo electronico y Contrasena de Aplicacion (si utilizas Gmail) para la ingesta automatica de alertas bancarias.
+Antes de iniciar, prepara las siguientes llaves:
+
+1. **Google Gemini API Key:**
+   - Ingresa a [Google AI Studio](https://aistudio.google.com/) y genera una clave de API gratuita.
+2. **Telegram Bot Token y Chat ID (Opcional para reportes móviles por chat):**
+   - Crea tu bot con [@BotFather](https://t.me/BotFather) para obtener el `TELEGRAM_TOKEN`.
+   - Obtén tu identificador numérico privado con [@userinfobot](https://t.me/userinfobot) (`TELEGRAM_CHAT_ID`).
+3. **Token de Seguridad de la API (Zero-Trust):**
+   - Genera una cadena aleatoria de 32 bytes en tu terminal:
+     ```bash
+     openssl rand -hex 32
+     ```
+   - Este valor será tu `API_TOKEN` compartido entre TrueNAS y las aplicaciones Flutter.
+4. **Red Segura Tailscale:**
+   - Instala Tailscale en TrueNAS, en tu PC Linux y en tus dispositivos Android.
+   - Anota la IP asignada a tu servidor TrueNAS (ej. `100.126.199.65`).
 
 ---
 
-## Instalacion y Configuracion
+### Paso 2: Configuración de Gmail
 
-### 1. Clonar el Repositorio
+Para que el agente procese automáticamente transferencias y compras notificadas por correo:
 
+#### 1. Crear una Contraseña de Aplicación
+1. Ve a tu cuenta de Google: [myaccount.google.com/security](https://myaccount.google.com/security).
+2. Asegúrate de tener activada la **Verificación en dos pasos (2FA)**.
+3. Dirígete a [Contraseñas de aplicaciones](https://myaccount.google.com/apppasswords).
+4. Escribe el nombre de la app (ej. `Hermes TrueNAS`) y pulsa **Crear**.
+5. Copia la contraseña de 16 caracteres generada (esta será tu `IMAP_PASSWORD`).
+
+#### 2. Crear la Etiqueta `Banca_Agente`
+1. Abre [Gmail](https://mail.google.com/).
+2. En el menú lateral izquierdo, haz clic en **+ Crear etiqueta nueva**.
+3. Nómbrala exactamente: `Banca_Agente`.
+
+#### 3. Configurar Filtros Automáticos en Gmail
+Crea filtros para que los correos bancarios se etiqueten automáticamente en `Banca_Agente`:
+- En la barra de búsqueda superior de Gmail, haz clic en el icono de **Mostrar opciones de búsqueda**.
+- En el campo **De:** agrega las direcciones de tus bancos. Por ejemplo:
+  ```text
+  (notificaciones@banorte.com OR avisos@mercadopago.com.mx OR no-reply@nu.com.mx)
+  ```
+- Haz clic en **Crear filtro**.
+- Marca las casillas:
+  - ☑ **Aplicar la etiqueta:** `Banca_Agente`.
+  - ☑ **Nunca marcar como spam**.
+  - *(Opcional)* ☑ **Aplicar también el filtro a las conversaciones que coincidan**.
+
+---
+
+### Paso 3: Despliegue en Servidor TrueNAS SCALE / Homelab
+
+#### 1. Preparar el Entorno en TrueNAS
+Conéctate por SSH a tu servidor TrueNAS:
 ```bash
-git clone https://github.com/jeldrax/cloud_financial_agent.git
-cd cloud_financial_agent
+ssh truenas_admin@<TU_IP_TAILSCALE>
+cd /mnt/Biblioteca/cloud_financial_agent  # O la ruta de tu dataset persistente
 ```
 
-### 2. Variables de Entorno
-
-Copia la plantilla `.env.example` para crear tu archivo `.env`:
-
-```bash
-cp .env.example .env
-```
-
-Edita `.env` con tus parametros reales:
-
+#### 2. Configurar el Archivo `.env` del Servidor
+Crea el archivo `.env` en el servidor:
 ```env
-# Telegram Bot
+# Telegram
 TELEGRAM_TOKEN=123456789:ABCDefghIJKLmnOPQRstuvWXYZ
 TELEGRAM_CHAT_ID=987654321
 
-# Google Gemini API
+# Google Gemini
 GEMINI_API_KEY=AIzaSyD-tu-clave-de-google-ai-studio
-GEMINI_MODEL=gemini-3.5-flash
+GEMINI_MODEL=gemini-2.5-flash
 
-# Ingesta de Correo Bancario (Opcional)
+# Gmail IMAP
 IMAP_USER=tu_correo@gmail.com
-IMAP_PASSWORD=tu_contrasena_de_aplicacion
+IMAP_PASSWORD=tu_contrasena_de_aplicacion_16_caracteres
 IMAP_SERVER=imap.gmail.com
 IMAP_PORT=993
 IMAP_FOLDER=Banca_Agente
 IMAP_CHECK_INTERVAL_MINUTES=5
 
-# Configuracion Regional
+# API de Clientes Flutter (Zero-Trust)
+API_TOKEN=tu_token_generado_con_openssl_rand_hex_32
+
+# Presupuesto Base Mensual (MXN)
+MONTHLY_INCOME=2400.0
+
+# Configuración Regional
 DEFAULT_LANG=es
 ```
 
-> **Nota:** El archivo `.env` y las bases de datos `*.db` estan listados en `.gitignore` para evitar cualquier exposicion en repositorios publicos.
-
-### 3. Ejecucion Local
-
-Crea y activa un entorno virtual de Python:
-
+#### 3. Ejecutar el Despliegue Automatizado
+El repositorio incluye un script listo para producción:
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+bash scripts/deploy_truenas.sh
 ```
-
-Inicia el agente:
-
-```bash
-python src/main.py
-```
-
----
-
-## Despliegue en Homelab / TrueNAS
-
-El proyecto incluye configuracion lista para ser ejecutada mediante Docker Compose, ideal para TrueNAS SCALE, Unraid o servidores Linux dedicados.
-
-### 1. Despliegue con Docker Compose
-
+O directamente con Docker Compose:
 ```bash
 docker compose up -d --build
 ```
 
-El archivo `docker-compose.yml` inicia dos servicios:
-- **hermes_financiero:** Contenedor del agente en ejecucion continua.
-- **grafana_homelab:** Instancia de Grafana expuesta en el puerto `3000`, configurada con el plugin de SQLite preinstalado (`frser-sqlite-datasource`) y montaje de datos en modo solo lectura (`:ro`).
-
-### 2. Monitoreo de Logs
-
+Verifica el estado del contenedor:
 ```bash
-docker compose logs -f agente
+docker compose ps
+curl -H "Authorization: Bearer <TU_API_TOKEN>" http://localhost:8000/api/v1/health
 ```
 
 ---
 
-## Uso del Bot de Telegram
+### Paso 4: Instalación en Dispositivos Clientes
 
-### Canales de Entrada
+#### A. Android (Samsung Galaxy S23 Ultra y Galaxy Tab S7 FE)
 
-Puedes interactuar con el bot de forma natural utilizando cualquiera de los siguientes formatos:
+Los APKs compilados en modo Release se encuentran listos en el repositorio en:
+- **APK Optimizado para `arm64-v8a` (18.6 MB — Recomendado):**
+  `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`
+- **APK Universal Release (50 MB):**
+  `build/app/outputs/flutter-apk/Hermes-Financial-Agent-v1.0.0.apk`
 
-1. **Mensajes de Texto:**
-   - *"Pague 450 pesos del servicio de luz con tarjeta"* -> Registrado como Gasto en Necesidades.
-   - *"Compre unos tacos por 120 pesos en efectivo"* -> Registrado como Gasto en Gustos.
-   - *"Me devolvieron 200 pesos de una compra en Amazon"* -> Registrado como Ingreso en Gustos.
-   - *"Transferi 500 pesos de Mercado Pago a Nu para pagar la tarjeta"* -> Ignorado correctamente.
-
-2. **Notas de Voz:**
-   - Envia una nota de voz explicando el movimiento. Gemini transcribira y categorizara el audio directamente.
-
-3. **Fotografias de Tickets o Recibos:**
-   - Toma una foto de tu recibo de compra. El modelo analizara la imagen para extraer el comercio, el monto y la categoria.
-
-### Comandos Disponibles
-
-- `/start` - Inicializa la conversacion con el bot.
-- `/reporte` - Genera y envia el grafico de barra horizontal apilada con el progreso del mes y el balance neto.
-- `/ayuda` - Muestra la guia rapida de comandos.
-
-### Visualizacion del Progreso Presupuestal
-
-Al solicitar el comando `/reporte`, el agente calcula el gasto neto acumulado en el mes (`Gastos - Ingresos`) para cada una de las tres categorias y genera una barra horizontal apilada con los limites presupuestales correspondientes:
-
-![Progreso del Ingreso Total 50/30/20](docs/images/grafico_50_30_20.png)
-
-Junto a la imagen, el bot envia el desglose textual exacto del saldo disponible:
-
-```text
-*Progreso del Ingreso Total ($2,400 MXN)*
-
-*Necesidades ($1,200):*
-  - Gasto neto: $680.00
-  - Saldo restante: $520.00
-
-*Gustos ($720):*
-  - Gasto neto: $350.00
-  - Saldo restante: $370.00
-
-*Ahorro ($480):*
-  - Gasto neto: $240.00
-  - Saldo restante: $240.00
-
-*Saldo restante total disponible:* $1,130.00
-```
-
----
-
-## Configuracion de Grafana
-
-1. Accede a Grafana en `http://<IP_DE_TU_SERVIDOR>:3000` (Usuario: `admin`, Contrasena: `admin`).
-2. Dirigete a **Connections** > **Data Sources** > **Add new data source**.
-3. Selecciona **SQLite**.
-4. En el campo **Path**, ingresa:
-   ```text
-   /var/lib/grafana/data/gastos.db
+##### ¿Cómo enviarlo e instalarlo?
+1. **Vía Taildrop (Tailscale):** Con Tailscale activo en tu PC y en tu Galaxy S23 Ultra / Tab S7 FE, envía el archivo con clic derecho o por comando:
+   ```bash
+   tailscale file cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "Galaxy-S23-Ultra:"
    ```
-5. Guarda y prueba la conexion con **Save & Test**.
+2. **Vía KDE Connect:** Envía el archivo directamente a tu teléfono o tablet.
+3. **Instalación directa por ADB (opcional con depuración USB/WiFi activada):**
+   ```bash
+   adb install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+   ```
 
-### Consultas SQL de Ejemplo
+##### Permisos solicitados por la aplicación:
+- **Huella Dactilar / Biometría:** Para desbloquear la bóveda financiera al abrir o reanudar la app.
+- **Micrófono:** Para el registro rápido de gastos mediante notas de voz interpretadas por Gemini.
+- **Acceso a Notificaciones:** Para interceptar y registrar automáticamente pagos de tus aplicaciones bancarias.
 
-#### Gasto Neto por Categoria del Mes Actual
+---
 
-```sql
-SELECT
-    categoria,
-    SUM(CASE WHEN tipo = 'Gasto' THEN monto ELSE -monto END) AS gasto_neto
-FROM transacciones
-WHERE strftime('%Y-%m', fecha) = strftime('%Y-%m', 'now')
-GROUP BY categoria;
-```
+#### B. Linux Desktop (CachyOS / KDE Plasma)
 
-#### Total Gastado en el Mes en Curso
+La aplicación ya se encuentra compilada e integrada en el sistema de escritorio:
 
-```sql
-SELECT
-    SUM(CASE WHEN tipo = 'Gasto' THEN monto ELSE -monto END) AS total_mes
-FROM transacciones
-WHERE strftime('%Y-%m', fecha) = strftime('%Y-%m', 'now');
-```
+- **Binario del sistema:**
+  `~/.local/share/cloud_financial_agent/cloud_financial_agent`
+- **Comando global en terminal:**
+  ```bash
+  cloud-financial-agent
+  ```
+- **Lanzador de aplicaciones (.desktop):**
+  `~/.local/share/applications/cloud-financial-agent.desktop` con icono oficial Starfield.
 
-#### Historico Diario de Gastos
+##### Abrir desde el entorno gráfico:
+Presiona la tecla **Super (Windows)** en KDE Plasma y escribe **"Hermes Financial Agent"** o **"Bóveda Financiera"**.
 
-```sql
-SELECT
-    strftime('%Y-%m-%d', fecha) AS dia,
-    SUM(monto) AS total_dia
-FROM transacciones
-WHERE tipo = 'Gasto'
-GROUP BY dia
-ORDER BY dia ASC;
+##### Para volver a compilar e instalar desde cero en Linux:
+```bash
+# Compilar bundle de release
+flutter build linux --release
+
+# Instalar en el directorio local de aplicaciones
+mkdir -p "$HOME/.local/share/cloud_financial_agent" "$HOME/.local/bin"
+cp -r build/linux/x64/release/bundle/* "$HOME/.local/share/cloud_financial_agent/"
+ln -sf "$HOME/.local/share/cloud_financial_agent/cloud_financial_agent" "$HOME/.local/bin/cloud-financial-agent"
+update-desktop-database "$HOME/.local/share/applications"
 ```
 
 ---
 
-## Licencia y Contribuciones
+## 📱 Uso y Pruebas del Sistema
 
-Este proyecto se distribuye bajo la licencia MIT. Las contribuciones, sugerencias y mejoras son bienvenidas. Para participar:
+### Panel de Diagnóstico de Gmail IMAP y Cuentas
+1. Abre la aplicación en tu Android o Linux.
+2. Dirígete a la pestaña de **Ajustes** (icono de engranaje).
+3. En la sección **Conexión de Cuentas y Gmail IMAP**, pulsa el botón **"Probar Gmail"**.
+4. La app se comunicará con TrueNAS en tiempo real y mostrará:
+   - Estado de la conexión SSL y carpeta `Banca_Agente`.
+   - Total de correos analizados en el mes.
+   - Cuentas detectadas (ej. `banorte`, `mercadopago`, `nu`).
+   - Última sincronización y desglose por entidad bancaria.
 
-1. Realiza un Fork del repositorio.
-2. Crea una rama descriptiva para tu funcionalidad (`git checkout -b feature/nueva-mejora`).
-3. Realiza tus confirmaciones (`git commit -m 'feat: descripcion del cambio'`).
-4. Publica la rama (`git push origin feature/nueva-mejora`).
-5. Abre un Pull Request detallando tus cambios.
+### Ingesta por Voz, Texto y Notificaciones Bancarias
+- **Voz con Gemini:** Mantén presionado el botón de micrófono en la pestaña de Movimientos, dicta: *"Compré una pizza de 280 pesos en Domino's con tarjeta de débito"* y suelta. El backend transcribirá y clasificará el gasto automáticamente en **Gustos**.
+- **Texto Libre:** Ingresa descripciones informales; el modelo identificará comercio, monto y categoría 50/30/20.
+- **Notificaciones Bancarias:** Cuando recibas un SMS o alerta de compra en tu S23 Ultra, el servicio de escucha lo enviará al webhook con un hash SHA-256 para evitar registros duplicados.
+
+### Bot de Telegram y Visualización en Grafana
+- **/reporte:** Envía el balance consolidado del mes junto con el gráfico de barras apiladas generado por Matplotlib.
+- **/ayuda:** Muestra la lista de comandos disponibles.
+- **Grafana (Puerto 3000):** Ingresa a `http://<IP_TAILSCALE>:3000` con `admin` / `admin` para consultar tus métricas en SQLite.
+
+---
+
+## 🧪 Pruebas Automatizadas y CI/CD
+
+El repositorio cuenta con una suite completa de pruebas unitarias y de integración que validan:
+1. Autenticación con token Bearer en tiempo constante.
+2. Cálculo neto mensual 50/30/20 (`Gastos - Devoluciones`).
+3. Deduplicación estricta de webhooks bancarios.
+4. Pre-filtrado de remitentes de correo para no desperdiciar cuota de Gemini.
+
+Para ejecutar las pruebas localmente:
+```bash
+python -m unittest tests/test_api.py -v
+```
+
+Para verificar la integridad del código Flutter:
+```bash
+flutter analyze
+```
+
+---
+
+## 📄 Licencia
+
+Este proyecto se distribuye bajo la licencia **MIT**. Puedes usarlo, adaptarlo y extenderlo libremente en tu homelab personal.
