@@ -1,6 +1,6 @@
 # Cloud Financial Agent (Hermes) 🏛️💰
 
-Sistema integral y autónomo de finanzas personales *self-hosted* basado en la metodología presupuestal **50/30/20**. Integra un **backend inteligente en Python (FastAPI + Google Gemini API + Gmail IMAP + SQLite + Telegram Bot)** desplegado en servidor **TrueNAS SCALE** y un **frontend multiplataforma en Flutter** para **Android (Samsung Galaxy S23 Ultra, Galaxy Tab S7 FE)** y **Linux Desktop (CachyOS / KDE Plasma)** con arquitectura de seguridad **Zero-Trust**.
+Sistema integral y autónomo de finanzas personales *self-hosted* basado en la metodología presupuestal **50/30/20**. Integra un **backend inteligente en Python (FastAPI + Google Gemini API + Gmail IMAP + SQLite + Telegram Bot)** desplegado en servidor **TrueNAS SCALE / Docker Homelab** y un **frontend multiplataforma en Flutter** para **Android (Smartphones y Tablets)** y **Linux Desktop** con arquitectura de seguridad **Zero-Trust**.
 
 ---
 
@@ -9,7 +9,7 @@ Sistema integral y autónomo de finanzas personales *self-hosted* basado en la m
 - [Visión General del Sistema](#-visión-general-del-sistema)
 - [Arquitectura y Metodología](#-arquitectura-y-metodología)
   - [Regla Presupuestal 50/30/20](#regla-presupuestal-503020)
-  - [Reglas de Exclusión Antiduplicidad (Banorte, Nu, Mercado Pago)](#reglas-de-exclusión-antiduplicidad)
+  - [Reglas de Exclusión Antiduplicidad](#reglas-de-exclusión-antiduplicidad)
   - [Seguridad Zero-Trust y Bóveda Biométrica](#seguridad-zero-trust-y-bóveda-biométrica)
 - [Stack Tecnológico](#-stack-tecnológico)
 - [Estructura del Proyecto](#-estructura-del-proyecto)
@@ -18,8 +18,8 @@ Sistema integral y autónomo de finanzas personales *self-hosted* basado en la m
   - [Paso 2: Configuración de Gmail (2FA, Contraseña de App y Filtros)](#paso-2-configuración-de-gmail)
   - [Paso 3: Despliegue en Servidor TrueNAS SCALE / Homelab](#paso-3-despliegue-en-servidor-truenas-scale--homelab)
   - [Paso 4: Instalación en Dispositivos Clientes](#paso-4-instalación-en-dispositivos-clientes)
-    - [Android (Samsung Galaxy S23 Ultra / Galaxy Tab S7 FE)](#a-android-samsung-galaxy-s23-ultra-y-galaxy-tab-s7-fe)
-    - [Linux Desktop (CachyOS / Arch / Ubuntu / KDE Plasma)](#b-linux-desktop-cachyos--kde-plasma)
+    - [Android (Smartphones y Tablets)](#a-android-smartphones-y-tablets)
+    - [Linux Desktop](#b-linux-desktop)
 - [Uso y Pruebas del Sistema](#-uso-y-pruebas-del-sistema)
   - [Panel de Diagnóstico de Gmail IMAP y Cuentas](#panel-de-diagnóstico-de-gmail-imap-y-cuentas)
   - [Ingesta por Voz, Texto y Notificaciones Bancarias](#ingesta-por-voz-texto-y-notificaciones-bancarias)
@@ -34,16 +34,16 @@ Sistema integral y autónomo de finanzas personales *self-hosted* basado en la m
 ```
                       ┌──────────────────────────────────────────────┐
                       │          Notificaciones Bancarias            │
-                      │  (Banorte, Mercado Pago, Nu, BBVA, etc.)     │
+                      │       (Alertas de Compra, SPEI, etc.)        │
                       └──────────────────────┬───────────────────────┘
                                              │ IMAP SSL / Webhook
                                              ▼
 ┌───────────────────────────┐      ┌────────────────────────────────────────────────────────┐
-│   Dispositivos Clientes   │      │                  TrueNAS SCALE Homelab                 │
+│   Dispositivos Clientes   │      │                  Servidor / Homelab                    │
 │                           │      │                                                        │
-│ • S23 Ultra (Android APK) │◄────►│  • FastAPI REST API (Bearer Auth Zero-Trust / Port 8000)│
-│ • Tab S7 FE (Tablet)      │ Tail-│  • Motor Gemini Multimodal (Esquemas Pydantic 50/30/20)│
-│ • CachyOS (Linux Desktop) │ scale│  • Monitor IMAP Banca_Agente con Deduplicación Única   │
+│ • Móvil Android (APK)     │◄────►│  • FastAPI REST API (Bearer Auth Zero-Trust / Port 8000)│
+│ • Tablet Android (APK)    │ Tail-│  • Motor Gemini Multimodal (Esquemas Pydantic 50/30/20)│
+│ • Linux Desktop App       │ scale│  • Monitor IMAP Banca_Agente con Deduplicación Única   │
 │   (Bóveda Biométrica +    │      │  • SQLite3 (Persistencia local en data/gastos.db)       │
 │    Starfield Dark Theme)  │      │  • Telegram Bot Polling (Reportes y Gráficos)          │
 └───────────────────────────┘      │  • Grafana Homelab (Dashboards Analíticos / Port 3000)  │
@@ -62,8 +62,8 @@ Cada movimiento financiero se clasifica automáticamente con un esquema estructu
 
 ### Reglas de Exclusión Antiduplicidad
 Para evitar contabilizar dos veces el dinero o inflar falsamente los egresos:
-- **Transferencias entre cuentas propias:** Movimientos entre tus cuentas (ej. transferir de Banorte a Mercado Pago a nombre de *Pablo Esteban Paredes Canche*) se marcan como `IGNORAR`.
-- **Pagos de tarjetas de crédito:** Liquidar la tarjeta Nu o Banorte se ignora; lo que se contabiliza son las compras individuales que generaron ese saldo.
+- **Transferencias entre cuentas propias:** Movimientos entre cuentas propias del mismo titular se marcan como `IGNORAR`.
+- **Pagos de tarjetas de crédito:** Liquidar una tarjeta de crédito se ignora; lo que se contabiliza son las compras individuales que generaron ese saldo.
 - **Depósitos salariales regulares:** Financian el presupuesto base mensual y no se suman como gasto invertido.
 
 ### Seguridad Zero-Trust y Bóveda Biométrica
@@ -85,7 +85,7 @@ Para evitar contabilizar dos veces el dinero o inflar falsamente los egresos:
 | **Seguridad de Cliente** | `envied`, `local_auth` (Biometría Android/Linux) |
 | **Audio & Notificaciones** | `record: ^7.1.2`, Webhooks SHA-256 idempotentes |
 | **Almacenamiento** | SQLite 3 (`WAL mode`), índices optimizados de fecha y hash |
-| **Infraestructura** | Docker Compose, TrueNAS SCALE, Tailscale VPN, Grafana |
+| **Infraestructura** | Docker Compose, TrueNAS SCALE / Linux Server, Tailscale VPN, Grafana |
 
 ---
 
@@ -93,10 +93,10 @@ Para evitar contabilizar dos veces el dinero o inflar falsamente los egresos:
 
 ```text
 cloud_financial_agent/
-├── android/                   # Proyecto nativo Android (S23 Ultra / Tab S7 FE)
+├── android/                   # Proyecto nativo Android (Smartphones / Tablets)
 │   ├── app/build.gradle.kts   # Configuración de compilación, permisos y MinSDK 24
 │   └── app/src/main/          # MainActivity (FlutterFragmentActivity) y Manifest
-├── linux/                     # Proyecto nativo Linux (CachyOS / Arch / Ubuntu)
+├── linux/                     # Proyecto nativo Linux Desktop
 │   ├── CMakeLists.txt         # Integración GTK3 y plugins nativos
 │   └── runner/                # Punto de entrada C++ de la aplicación de escritorio
 ├── lib/                       # Código fuente multiplataforma en Flutter
@@ -119,7 +119,7 @@ cloud_financial_agent/
 ├── tests/
 │   └── test_api.py            # Suite de pruebas unitarias y de integración
 ├── scripts/
-│   └── deploy_truenas.sh      # Script de despliegue automatizado para TrueNAS SCALE
+│   └── deploy_truenas.sh      # Script de despliegue automatizado para TrueNAS / Linux
 ├── docker-compose.yml         # Orquestación de backend y Grafana
 ├── Dockerfile                 # Imagen Docker optimizada para producción
 └── pubspec.yaml               # Dependencias de Flutter
@@ -143,22 +143,22 @@ Antes de iniciar, prepara las siguientes llaves:
      ```bash
      openssl rand -hex 32
      ```
-   - Este valor será tu `API_TOKEN` compartido entre TrueNAS y las aplicaciones Flutter.
+   - Este valor será tu `API_TOKEN` compartido entre el servidor y las aplicaciones cliente.
 4. **Red Segura Tailscale:**
-   - Instala Tailscale en TrueNAS, en tu PC Linux y en tus dispositivos Android.
-   - Anota la IP asignada a tu servidor TrueNAS (ej. `100.126.199.65`).
+   - Instala Tailscale en tu servidor, computadoras y dispositivos móviles.
+   - Anota la IP de Tailscale asignada a tu servidor (ej. `100.x.y.z`).
 
 ---
 
 ### Paso 2: Configuración de Gmail
 
-Para que el agente procese automáticamente transferencias y compras notificadas por correo:
+Para que el agente procese automáticamente notificaciones bancarias recibidas por correo:
 
 #### 1. Crear una Contraseña de Aplicación
 1. Ve a tu cuenta de Google: [myaccount.google.com/security](https://myaccount.google.com/security).
 2. Asegúrate de tener activada la **Verificación en dos pasos (2FA)**.
 3. Dirígete a [Contraseñas de aplicaciones](https://myaccount.google.com/apppasswords).
-4. Escribe el nombre de la app (ej. `Hermes TrueNAS`) y pulsa **Crear**.
+4. Escribe el nombre de la app (ej. `Hermes Financial Agent`) y pulsa **Crear**.
 5. Copia la contraseña de 16 caracteres generada (esta será tu `IMAP_PASSWORD`).
 
 #### 2. Crear la Etiqueta `Banca_Agente`
@@ -169,10 +169,7 @@ Para que el agente procese automáticamente transferencias y compras notificadas
 #### 3. Configurar Filtros Automáticos en Gmail
 Crea filtros para que los correos bancarios se etiqueten automáticamente en `Banca_Agente`:
 - En la barra de búsqueda superior de Gmail, haz clic en el icono de **Mostrar opciones de búsqueda**.
-- En el campo **De:** agrega las direcciones de tus bancos. Por ejemplo:
-  ```text
-  (notificaciones@banorte.com OR avisos@mercadopago.com.mx OR no-reply@nu.com.mx)
-  ```
+- En el campo **De:** agrega las direcciones o dominios de tus bancos (ej. `(notificaciones@tubanco.com OR avisos@tudebito.com)`).
 - Haz clic en **Crear filtro**.
 - Marca las casillas:
   - ☑ **Aplicar la etiqueta:** `Banca_Agente`.
@@ -183,11 +180,11 @@ Crea filtros para que los correos bancarios se etiqueten automáticamente en `Ba
 
 ### Paso 3: Despliegue en Servidor TrueNAS SCALE / Homelab
 
-#### 1. Preparar el Entorno en TrueNAS
-Conéctate por SSH a tu servidor TrueNAS:
+#### 1. Preparar el Entorno en el Servidor
+Conéctate por SSH a tu servidor:
 ```bash
-ssh truenas_admin@<TU_IP_TAILSCALE>
-cd /mnt/Biblioteca/cloud_financial_agent  # O la ruta de tu dataset persistente
+ssh usuario@<TU_IP_TAILSCALE>
+cd /ruta/hacia/tu/dataset/cloud_financial_agent
 ```
 
 #### 2. Configurar el Archivo `.env` del Servidor
@@ -212,7 +209,7 @@ IMAP_CHECK_INTERVAL_MINUTES=5
 # API de Clientes Flutter (Zero-Trust)
 API_TOKEN=tu_token_generado_con_openssl_rand_hex_32
 
-# Presupuesto Base Mensual (MXN)
+# Presupuesto Base Mensual (Moneda local)
 MONTHLY_INCOME=2400.0
 
 # Configuración Regional
@@ -239,35 +236,35 @@ curl -H "Authorization: Bearer <TU_API_TOKEN>" http://localhost:8000/api/v1/heal
 
 ### Paso 4: Instalación en Dispositivos Clientes
 
-#### A. Android (Samsung Galaxy S23 Ultra y Galaxy Tab S7 FE)
+#### A. Android (Smartphones y Tablets)
 
-Los APKs compilados en modo Release se encuentran listos en el repositorio en:
-- **APK Optimizado para `arm64-v8a` (18.6 MB — Recomendado):**
+Los APKs compilados en modo Release se encuentran disponibles en:
+- **APK Optimizado para `arm64-v8a` (Recomendado para dispositivos modernos):**
   `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`
-- **APK Universal Release (50 MB):**
+- **APK Universal Release:**
   `build/app/outputs/flutter-apk/Hermes-Financial-Agent-v1.0.0.apk`
 
 ##### ¿Cómo enviarlo e instalarlo?
-1. **Vía Taildrop (Tailscale):** Con Tailscale activo en tu PC y en tu Galaxy S23 Ultra / Tab S7 FE, envía el archivo con clic derecho o por comando:
+1. **Vía Taildrop (Tailscale):** Con Tailscale activo en tu PC y en tu dispositivo Android, envía el archivo con clic derecho o por comando:
    ```bash
-   tailscale file cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "Galaxy-S23-Ultra:"
+   tailscale file cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "<NOMBRE_DISPOSITIVO_ANDROID>:"
    ```
-2. **Vía KDE Connect:** Envía el archivo directamente a tu teléfono o tablet.
-3. **Instalación directa por ADB (opcional con depuración USB/WiFi activada):**
+2. **Vía herramientas locales:** Transfiérelo mediante KDE Connect, Nearby Share / Quick Share o almacenamiento compartido.
+3. **Instalación directa por ADB:**
    ```bash
    adb install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
    ```
 
 ##### Permisos solicitados por la aplicación:
-- **Huella Dactilar / Biometría:** Para desbloquear la bóveda financiera al abrir o reanudar la app.
+- **Biometría:** Para proteger la bóveda financiera al abrir o reanudar la app.
 - **Micrófono:** Para el registro rápido de gastos mediante notas de voz interpretadas por Gemini.
-- **Acceso a Notificaciones:** Para interceptar y registrar automáticamente pagos de tus aplicaciones bancarias.
+- **Notificaciones:** Para interceptar y registrar pagos de aplicaciones bancarias compatibles.
 
 ---
 
-#### B. Linux Desktop (CachyOS / KDE Plasma)
+#### B. Linux Desktop
 
-La aplicación ya se encuentra compilada e integrada en el sistema de escritorio:
+La aplicación puede integrarse de forma nativa en tu entorno de escritorio Linux:
 
 - **Binario del sistema:**
   `~/.local/share/cloud_financial_agent/cloud_financial_agent`
@@ -278,19 +275,16 @@ La aplicación ya se encuentra compilada e integrada en el sistema de escritorio
 - **Lanzador de aplicaciones (.desktop):**
   `~/.local/share/applications/cloud-financial-agent.desktop` con icono oficial Starfield.
 
-##### Abrir desde el entorno gráfico:
-Presiona la tecla **Super (Windows)** en KDE Plasma y escribe **"Hermes Financial Agent"** o **"Bóveda Financiera"**.
-
-##### Para volver a compilar e instalar desde cero en Linux:
+##### Compilar e instalar en Linux:
 ```bash
-# Compilar bundle de release
+# 1. Compilar bundle de release
 flutter build linux --release
 
-# Instalar en el directorio local de aplicaciones
+# 2. Instalar en el directorio local de aplicaciones
 mkdir -p "$HOME/.local/share/cloud_financial_agent" "$HOME/.local/bin"
 cp -r build/linux/x64/release/bundle/* "$HOME/.local/share/cloud_financial_agent/"
 ln -sf "$HOME/.local/share/cloud_financial_agent/cloud_financial_agent" "$HOME/.local/bin/cloud-financial-agent"
-update-desktop-database "$HOME/.local/share/applications"
+update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
 ```
 
 ---
@@ -298,24 +292,24 @@ update-desktop-database "$HOME/.local/share/applications"
 ## 📱 Uso y Pruebas del Sistema
 
 ### Panel de Diagnóstico de Gmail IMAP y Cuentas
-1. Abre la aplicación en tu Android o Linux.
+1. Abre la aplicación en tu dispositivo Android o Linux.
 2. Dirígete a la pestaña de **Ajustes** (icono de engranaje).
 3. En la sección **Conexión de Cuentas y Gmail IMAP**, pulsa el botón **"Probar Gmail"**.
-4. La app se comunicará con TrueNAS en tiempo real y mostrará:
+4. La app se comunicará con el servidor en tiempo real y mostrará:
    - Estado de la conexión SSL y carpeta `Banca_Agente`.
    - Total de correos analizados en el mes.
-   - Cuentas detectadas (ej. `banorte`, `mercadopago`, `nu`).
+   - Cuentas y emisores detectados.
    - Última sincronización y desglose por entidad bancaria.
 
 ### Ingesta por Voz, Texto y Notificaciones Bancarias
-- **Voz con Gemini:** Mantén presionado el botón de micrófono en la pestaña de Movimientos, dicta: *"Compré una pizza de 280 pesos en Domino's con tarjeta de débito"* y suelta. El backend transcribirá y clasificará el gasto automáticamente en **Gustos**.
-- **Texto Libre:** Ingresa descripciones informales; el modelo identificará comercio, monto y categoría 50/30/20.
-- **Notificaciones Bancarias:** Cuando recibas un SMS o alerta de compra en tu S23 Ultra, el servicio de escucha lo enviará al webhook con un hash SHA-256 para evitar registros duplicados.
+- **Voz con Gemini:** Mantén presionado el botón de micrófono en la pestaña de Movimientos, dicta: *"Compré una despensa de 650 pesos en el supermercado con tarjeta de débito"* y suelta. El backend transcribirá y clasificará el gasto automáticamente en **Necesidades**.
+- **Texto Libre:** Ingresa descripciones cotidianas; el modelo identificará comercio, monto y categoría 50/30/20.
+- **Notificaciones Bancarias:** Cuando recibas un aviso bancario en tu dispositivo, el servicio lo enviará al webhook con un hash SHA-256 para evitar registros duplicados.
 
 ### Bot de Telegram y Visualización en Grafana
 - **/reporte:** Envía el balance consolidado del mes junto con el gráfico de barras apiladas generado por Matplotlib.
 - **/ayuda:** Muestra la lista de comandos disponibles.
-- **Grafana (Puerto 3000):** Ingresa a `http://<IP_TAILSCALE>:3000` con `admin` / `admin` para consultar tus métricas en SQLite.
+- **Grafana (Puerto 3000):** Ingresa a `http://<TU_IP_TAILSCALE>:3000` con `admin` / `admin` para consultar tus métricas en SQLite.
 
 ---
 
