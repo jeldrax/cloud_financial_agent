@@ -37,3 +37,7 @@ android/key.properties
 *.jks
 *.keystore
 linux/flutter/ephemeral/
+
+# Brag video artifacts
+brag-output/
+brag-output-*/

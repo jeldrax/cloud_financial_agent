@@ -4,6 +4,14 @@ Sistema integral y autónomo de finanzas personales *self-hosted* basado en la m
 
 ---
 
+### 🎬 Demostración en Video
+
+https://github.com/user-attachments/assets/docs/media/hermes_launch.mp4
+
+> **Nota:** Puedes reproducir el video de lanzamiento en formato MP4 directamente en [docs/media/hermes_launch.mp4](docs/media/hermes_launch.mp4).
+
+---
+
 ## 📑 Tabla de Contenidos
 
 - [Visión General del Sistema](#-visión-general-del-sistema)
