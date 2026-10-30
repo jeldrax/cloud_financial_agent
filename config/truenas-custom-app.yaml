@@ -9,7 +9,7 @@ services:
       context: /mnt/tank/apps/cloud_financial_agent
       dockerfile: Dockerfile
     image: cloud-financial-agent:latest
-    container_name: hermes_financiero
+    container_name: financial_agent
     restart: unless-stopped
     env_file:
       - /mnt/tank/apps/cloud_financial_agent/.env

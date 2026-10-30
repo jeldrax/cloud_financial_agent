@@ -39,7 +39,7 @@ from src.database import (
     obtener_transacciones_recientes,
 )
 
-logger = logging.getLogger("HermesFastAPI")
+logger = logging.getLogger("FinancialAgentAPI")
 
 security_scheme = HTTPBearer(auto_error=False)
 

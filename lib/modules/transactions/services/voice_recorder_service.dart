@@ -20,7 +20,7 @@ class VoiceRecorderService {
 
     final Directory tempDir = await getTemporaryDirectory();
     final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-    _activeRecordingPath = '${tempDir.path}/hermes_voice_$timestamp.m4a';
+    _activeRecordingPath = '${tempDir.path}/voice_$timestamp.m4a';
 
     const config = RecordConfig(
       encoder: AudioEncoder.aacLc,

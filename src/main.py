@@ -37,7 +37,7 @@ def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         level=logging.INFO
     )
-    logger = logging.getLogger("HermesFinanciero")
+    logger = logging.getLogger("FinancialAgent")
     logger.info("Iniciando Agente Financiero Autónomo (FastAPI + Telegram Bot)...")
 
     # 1. Asegurar esquema de base de datos

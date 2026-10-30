@@ -284,7 +284,7 @@ class _MainDashboardViewState extends State<MainDashboardView> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'HERMES 50/30/20',
+                                  'FINANCIAL AGENT 50/30/20',
                                   style: TextStyle(
                                     color: AppColors.textPrimary,
                                     fontWeight: FontWeight.w800,

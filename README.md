@@ -1,4 +1,4 @@
-# Cloud Financial Agent (Hermes) 🏛️💰
+# Cloud Financial Agent 🏛️💰
 
 Sistema privado y *self-hosted* de finanzas personales basado en la regla presupuestal **50/30/20**, diseñado para que el usuario registre y controle **exclusivamente por cuenta propia** sus ingresos y egresos sin vincular cuentas bancarias, correos ni servicios de terceros.
 
@@ -8,9 +8,9 @@ Combina un **backend aislado en Python (FastAPI + SQLite WAL + Google Gemini API
 
 ### 🎬 Demostración en Video
 
-[![Video de Presentación](docs/media/hermes_launch_poster.jpg)](docs/media/hermes_launch.mp4)
+[![Video de Presentación](docs/media/financial_agent_launch_poster.jpg)](docs/media/financial_agent_launch.mp4)
 
-> **Nota:** Puedes reproducir el video de presentación en formato MP4 directamente en [`docs/media/hermes_launch.mp4`](docs/media/hermes_launch.mp4).
+> **Nota:** Puedes reproducir el video de presentación en formato MP4 directamente en [`docs/media/financial_agent_launch.mp4`](docs/media/financial_agent_launch.mp4).
 
 ---
 

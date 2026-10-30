@@ -2,7 +2,7 @@ services:
   agente:
     build: .
     image: cloud-financial-agent:latest
-    container_name: hermes_financiero
+    container_name: financial_agent
     restart: unless-stopped
     env_file: .env
     environment:
