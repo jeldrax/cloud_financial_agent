@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
-/// Servicio multiplataforma de grabación directa de voz ("Plug & Play" estilo MonAi).
+/// Servicio multiplataforma de grabación directa de voz.
 ///
-/// Soporta Android (S23 Ultra / Galaxy Tab S7 FE) y Linux Desktop (CachyOS PipeWire/ALSA).
+/// Soporta Android y Linux Desktop (PipeWire/PulseAudio/ALSA).
 /// Los archivos de audio se guardan temporalmente y se destruyen tras ser enviados a Gemini.
 class VoiceRecorderService {
   final AudioRecorder _audioRecorder = AudioRecorder();

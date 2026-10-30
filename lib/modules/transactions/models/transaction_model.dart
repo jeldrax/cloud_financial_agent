@@ -55,19 +55,18 @@ enum TransactionType {
   }
 }
 
-/// Canal de origen de la ingesta de datos.
+/// Canal de registro manual del usuario (sin conexiones bancarias externas).
 enum IngestionSource {
-  voiceAi('Voz IA (MonAi)', Icons.graphic_eq_rounded),
+  manualForm('Registro Manual', Icons.edit_note_rounded),
   textAi('Texto IA', Icons.auto_awesome_rounded),
-  bankWebhook('Webhook Bancario', Icons.webhook_rounded);
+  voiceAi('Voz IA', Icons.graphic_eq_rounded);
 
   final String label;
   final IconData icon;
   const IngestionSource(this.label, this.icon);
 }
 
-/// Entidad inmutable que representa una fila de la tabla SQLite `transacciones`
-/// o el resultado estructurado devuelto por Gemini (`GastoExtraido`).
+/// Entidad inmutable que representa una fila real de la tabla SQLite `transacciones`.
 class TransactionRecord {
   final int? id;
   final DateTime fecha;
@@ -88,16 +87,27 @@ class TransactionRecord {
     required this.metodoPago,
     required this.tipo,
     this.identificadorExterno,
-    this.source = IngestionSource.textAi,
+    this.source = IngestionSource.manualForm,
   });
 
   bool get isIgnoredByRule => categoria == BudgetCategory.ignorar;
 
   factory TransactionRecord.fromJson(
     Map<String, dynamic> json, {
-    IngestionSource defaultSource = IngestionSource.textAi,
+    IngestionSource defaultSource = IngestionSource.manualForm,
   }) {
     final String? extId = json['identificador_externo'] as String?;
+    final String metodo = (json['metodo_pago'] as String?) ?? 'Efectivo';
+
+    IngestionSource resolvedSource = defaultSource;
+    if (extId == 'MANUAL') {
+      resolvedSource = IngestionSource.manualForm;
+    } else if (metodo.toLowerCase().contains('voz')) {
+      resolvedSource = IngestionSource.voiceAi;
+    } else if (metodo.toLowerCase().contains('ia')) {
+      resolvedSource = IngestionSource.textAi;
+    }
+
     return TransactionRecord(
       id: json['id'] as int?,
       fecha: json['fecha'] != null
@@ -108,12 +118,10 @@ class TransactionRecord {
       categoria: BudgetCategory.fromBackend(
         (json['categoria'] as String?) ?? 'Gustos',
       ),
-      metodoPago: (json['metodo_pago'] as String?) ?? 'No especificado',
+      metodoPago: metodo,
       tipo: TransactionType.fromBackend((json['tipo'] as String?) ?? 'Gasto'),
       identificadorExterno: extId,
-      source: (extId != null && extId.startsWith('WH-'))
-          ? IngestionSource.bankWebhook
-          : defaultSource,
+      source: resolvedSource,
     );
   }
 

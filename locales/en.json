@@ -1,11 +1,10 @@
 {
-  "processing": "Processing with AI...",
+  "processing": "Processing transaction with AI...",
   "unauthorized": "Access denied. This bot is private.",
   "report_empty": "No transactions recorded yet.",
   "report_title": "Expense Distribution by Category",
-  "expense_saved": "*Expense recorded:*\n- *Amount:* ${monto:.2f}\n- *Category:* {categoria}\n- *Description:* {concepto}\n- *Method:* {metodo_pago}",
-  "expense_email_saved": "*Expense detected from bank email:*\n- *Amount:* ${monto:.2f}\n- *Category:* {categoria}\n- *Description:* {concepto}\n- *Method:* {metodo_pago}",
-  "expense_error": "Could not extract transaction details. Please make sure to include amount and description.",
-  "welcome": "Hello. I am your Autonomous Financial Agent.\n\nYou can send me your transactions via text (e.g. _'Bought coffee for $4.50 at Starbucks'_), voice note or receipt photo.\n\nCommands:\n/reporte - 50/30/20 budget chart\n/ayuda - View options",
-  "help": "*Available commands:*\n- Send any transaction (text, voice note or photo).\n- `/reporte` - Generate a 50/30/20 budget chart.\n- `/ayuda` - Show this help message."
+  "expense_saved": "Transaction recorded:\n• Amount: ${monto:.2f}\n• Category: {categoria}\n• Description: {concepto}\n• Method: {metodo_pago}",
+  "expense_error": "Could not extract valid transaction details. Please include amount and description.",
+  "welcome": "Hello. I am your Personal Financial Agent (100% Manual & Private Mode).\n\nSend me your expenses or income via text (e.g. _'Bought coffee for $4.50 cash'_), voice note or receipt photo.\n\nCommands:\n/reporte - 50/30/20 budget chart\n/ayuda - View options",
+  "help": "*Available commands:*\n- Manually send any expense or income (text, voice note or receipt photo).\n- `/reporte` - Generate a 50/30/20 budget chart.\n- `/ayuda` - Show this help message."
 }

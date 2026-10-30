@@ -1,9 +1,9 @@
 name: cloud_financial_agent
 description: >-
-  Frontend multiplataforma Zero-Trust (S23 Ultra, Galaxy Tab S7 FE y Linux CachyOS KDE)
-  para Cloud Financial Agent (Hermes) basado en la regla presupuestal 50/30/20.
+  Frontend multiplataforma Zero-Trust (Android y Linux Desktop) para Cloud Financial Agent
+  basado en la regla presupuestal 50/30/20 con registro manual y asistido por IA.
 publish_to: 'none'
-version: 1.0.0+1
+version: 2.0.0+2
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -13,15 +13,13 @@ dependencies:
     sdk: flutter
   # Seguridad Local Continua (Biometría y credenciales del SO)
   local_auth: ^2.3.0
-  # Protección Zero-Trust (Ofuscación de variables de entorno .env)
+  # Protección Zero-Trust (Ofuscación binaria de variables de entorno .env)
   envied: ^1.1.1
-  # Cliente HTTP para comunicación con FastAPI en TrueNAS vía Tailscale
+  # Cliente HTTP para comunicación con FastAPI vía Tailscale
   http: ^1.2.2
-  # Captura directa de voz estilo MonAi (Android + Linux PipeWire/PulseAudio)
+  # Captura directa de voz manual (Android + Linux PipeWire/PulseAudio)
   record: ^7.1.2
   path_provider: ^2.1.5
-  # Hashing SHA-256 para deduplicación de Webhooks (identificador_externo)
-  crypto: ^3.0.6
 
 dev_dependencies:
   flutter_test:

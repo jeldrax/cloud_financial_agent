@@ -1,11 +1,10 @@
 {
-  "processing": "Procesando con IA...",
+  "processing": "Procesando movimiento con IA...",
   "unauthorized": "Acceso denegado. Este bot es privado.",
   "report_empty": "No hay transacciones registradas todavía.",
   "report_title": "Distribución de Gastos por Categoría",
-  "expense_saved": "*Gasto registrado:*\n- *Monto:* ${monto:.2f}\n- *Categoría:* {categoria}\n- *Concepto:* {concepto}\n- *Método:* {metodo_pago}",
-  "expense_email_saved": "*Gasto detectado en correo bancario:*\n- *Monto:* ${monto:.2f}\n- *Categoría:* {categoria}\n- *Concepto:* {concepto}\n- *Método:* {metodo_pago}",
-  "expense_error": "No se pudo extraer la información de la transacción. Asegúrate de incluir al menos el monto y concepto.",
-  "welcome": "Hola. Soy tu Agente Financiero Autónomo.\n\nPuedes enviarme tus transacciones por texto (ej. _'Compré un café por $45 en Starbucks'_), nota de voz o foto de recibo.\n\nComandos:\n/reporte - Gráfico de balance 50/30/20\n/ayuda - Ver opciones",
-  "help": "*Comandos disponibles:*\n- Envía un mensaje con cualquier transacción (texto, audio o foto).\n- `/reporte` - Genera una gráfica con la distribución de presupuesto 50/30/20.\n- `/ayuda` - Muestra esta ayuda."
+  "expense_saved": "Movimiento registrado:\n• Monto: ${monto:.2f}\n• Categoría: {categoria}\n• Concepto: {concepto}\n• Método: {metodo_pago}",
+  "expense_error": "No se pudo extraer un movimiento válido. Incluye al menos el monto y el concepto.",
+  "welcome": "Hola. Soy tu Agente Financiero Personal (Modo 100% Manual y Privado).\n\nEnvíame tus gastos o ingresos por texto (ej. _'Compré un café por $45 en efectivo'_), nota de voz o foto de recibo.\n\nComandos:\n/reporte - Gráfico de balance 50/30/20\n/ayuda - Ver opciones",
+  "help": "*Comandos disponibles:*\n- Envía manualmente cualquier gasto o ingreso (texto, audio o foto de recibo).\n- `/reporte` - Genera una gráfica con tu distribución presupuestal 50/30/20.\n- `/ayuda` - Muestra esta ayuda."
 }

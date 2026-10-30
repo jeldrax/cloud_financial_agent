@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../main.dart';
-import '../../transactions/services/bank_notification_webhook_service.dart';
 
 /// Vista del módulo `settings`:
-/// - Diagnóstico en vivo de la red privada Tailscale hacia FastAPI en TrueNAS (`ApiClient.checkTailscaleHealth`).
-/// - Configuración del presupuesto base mensual para el cálculo automático del 50/30/20.
-/// - Gestión de paquetes bancarios autorizados en Android (S23 Ultra) para el Scraping de notificaciones.
+/// - Diagnóstico en vivo de la red privada Tailscale hacia FastAPI (`ApiClient.checkTailscaleHealth`).
+/// - Configuración persistente en SQLite del presupuesto base mensual para la regla 50/30/20.
+/// - Resumen de controles activos de seguridad en tránsito y blindaje contra explotación de IA.
 class SettingsView extends StatefulWidget {
   final double monthlyIncome;
   final ValueChanged<double> onMonthlyIncomeChanged;
@@ -29,15 +28,16 @@ class _SettingsViewState extends State<SettingsView> {
   );
 
   bool _isCheckingHealth = false;
+  bool _isSavingBudget = false;
   TailscaleHealthStatus? _healthStatus;
 
-  bool _isCheckingImap = false;
-  Map<String, dynamic>? _imapDiagnostics;
-
-  final Map<String, bool> _enabledBankPackages = {
-    for (final entry in SupportedBankingApps.allowedPackages.entries)
-      entry.key: true,
-  };
+  @override
+  void didUpdateWidget(covariant SettingsView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.monthlyIncome != widget.monthlyIncome && !_isSavingBudget) {
+      _incomeController.text = widget.monthlyIncome.toStringAsFixed(0);
+    }
+  }
 
   @override
   void dispose() {
@@ -55,25 +55,46 @@ class _SettingsViewState extends State<SettingsView> {
     });
   }
 
-  Future<void> _runImapDiagnostics() async {
-    setState(() => _isCheckingImap = true);
+  Future<void> _saveMonthlyBudget() async {
+    final double? parsed =
+        double.tryParse(_incomeController.text.trim().replaceAll(',', '.'));
+    if (parsed == null || parsed <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppColors.accentRed,
+          content: Text('Ingresa un monto mensual válido mayor a 0.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSavingBudget = true);
     try {
-      final result = await _apiClient.fetchGmailImapDiagnostics();
+      final double saved = await _apiClient.updateMonthlyBudget(parsed);
       if (!mounted) return;
-      setState(() {
-        _imapDiagnostics = result;
-        _isCheckingImap = false;
-      });
-    } catch (e) {
+      widget.onMonthlyIncomeChanged(saved);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surface,
+          content: Text(
+            'Presupuesto 50/30/20 guardado en el servidor: \$${saved.toStringAsFixed(2)} MXN',
+          ),
+        ),
+      );
+    } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _imapDiagnostics = {
-          'conectado': false,
-          'mensaje': 'No se pudo consultar el diagnóstico IMAP: $e',
-          'muestra_recientes': <dynamic>[],
-        };
-        _isCheckingImap = false;
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppColors.accentRed,
+          content: Text(
+            'No se pudo guardar el presupuesto en el servidor. Verifica Tailscale.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingBudget = false);
+      }
     }
   }
 
@@ -88,7 +109,7 @@ class _SettingsViewState extends State<SettingsView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Configuración de Red Local y Presupuesto',
+                'Seguridad Zero-Trust y Presupuesto',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -97,7 +118,7 @@ class _SettingsViewState extends State<SettingsView> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Administración del nodo privado Tailscale, variables ofuscadas Zero-Trust y demonios de intercepción bancaria.',
+                'Administración del túnel cifrado Tailscale, presupuesto base 50/30/20 y protecciones contra explotación de IA.',
                 style: TextStyle(
                   fontSize: 13.5,
                   color: AppColors.textSecondary,
@@ -105,17 +126,21 @@ class _SettingsViewState extends State<SettingsView> {
               ),
               const SizedBox(height: 24),
 
-              // 1. Diagnóstico del Túnel Tailscale y Backend TrueNAS
+              // 1. Diagnóstico del Túnel Tailscale y Backend FastAPI
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           const Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.lan_rounded,
@@ -123,7 +148,7 @@ class _SettingsViewState extends State<SettingsView> {
                               ),
                               SizedBox(width: 10),
                               Text(
-                                'Conectividad Malla Tailscale (TrueNAS FastAPI)',
+                                'Conectividad Privada Tailscale (Zero-Trust)',
                                 style: TextStyle(
                                   fontSize: 16.5,
                                   fontWeight: FontWeight.w800,
@@ -156,7 +181,7 @@ class _SettingsViewState extends State<SettingsView> {
                       ),
                       const SizedBox(height: 14),
                       const Text(
-                        'Las peticiones HTTP y Webhooks utilizan exclusivamente `Env.apiUrl` y `Env.apiToken` ofuscados mediante `envied` en tiempo de compilación. No existen puertos expuestos a Internet.',
+                        'Toda transmisión de datos viaja exclusivamente sobre la red cifrada WireGuard de Tailscale utilizando credenciales ofuscadas en binario (`Env.apiUrl` y `Env.apiToken`).',
                         style: TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary,
@@ -176,7 +201,7 @@ class _SettingsViewState extends State<SettingsView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              '• Base URL: Env.apiUrl (Ofuscación Binaria Activa)',
+                              '• Endpoint Remoto: Env.apiUrl (Ofuscación Binaria Activa)',
                               style: TextStyle(
                                 fontFamily: 'monospace',
                                 fontSize: 12.5,
@@ -185,7 +210,7 @@ class _SettingsViewState extends State<SettingsView> {
                             ),
                             const SizedBox(height: 6),
                             const Text(
-                              '• Auth Header: Bearer <Env.apiToken> (Ofuscación Binaria Activa)',
+                              '• Autenticación: Bearer <Env.apiToken> (Comparación en Tiempo Constante)',
                               style: TextStyle(
                                 fontFamily: 'monospace',
                                 fontSize: 12.5,
@@ -231,195 +256,7 @@ class _SettingsViewState extends State<SettingsView> {
               ),
               const SizedBox(height: 20),
 
-              // 2. Diagnóstico en Vivo de Gmail IMAP y Cuentas Bancarias (Banca_Agente)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.mark_email_read_rounded,
-                                color: AppColors.accentOrange,
-                              ),
-                              SizedBox(width: 10),
-                              Text(
-                                'Conexión Gmail IMAP y Cuentas (Banca_Agente)',
-                                style: TextStyle(
-                                  fontSize: 16.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          ElevatedButton.icon(
-                            onPressed:
-                                _isCheckingImap ? null : _runImapDiagnostics,
-                            icon: _isCheckingImap
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.surfaceDark,
-                                    ),
-                                  )
-                                : const Icon(Icons.fact_check_rounded),
-                            label: Text(
-                              _isCheckingImap
-                                  ? 'Consultando Gmail...'
-                                  : 'Probar Gmail IMAP',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Verifica en modo solo lectura que el contenedor en TrueNAS pueda iniciar sesión en Gmail IMAP (`imap.gmail.com:993`), abrir la etiqueta `Banca_Agente` y filtrar alertas de Banorte, Nu y Mercado Pago.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                          height: 1.45,
-                        ),
-                      ),
-                      if (_imapDiagnostics != null) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceDark,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.cardBorder),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    (_imapDiagnostics!['conectado'] == true)
-                                        ? Icons.verified_rounded
-                                        : Icons.error_outline_rounded,
-                                    color:
-                                        (_imapDiagnostics!['conectado'] == true)
-                                            ? AppColors.accentTeal
-                                            : AppColors.accentRed,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      (_imapDiagnostics!['mensaje'] ?? '')
-                                          .toString(),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (_imapDiagnostics!['conectado'] == true) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Cuenta: ${_imapDiagnostics!['usuario']} • Carpeta: ${_imapDiagnostics!['carpeta']} • Total: ${_imapDiagnostics!['total_en_carpeta']} correos (${_imapDiagnostics!['no_leidos']} no leídos)',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.accentOrange,
-                                    fontFamily: 'monospace',
-                                  ),
-                                ),
-                                const Divider(
-                                  height: 22,
-                                  color: AppColors.cardBorder,
-                                ),
-                                const Text(
-                                  'ÚLTIMOS CORREOS EN LA ETIQUETA:',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.0,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                for (final item in (_imapDiagnostics![
-                                            'muestra_recientes']
-                                        as List<dynamic>? ??
-                                    const []))
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 8.0),
-                                    child: Text(
-                                      '• [${item['fecha']}] ${item['asunto']} -> ${item['estado']}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: (item['en_sqlite'] == true)
-                                            ? AppColors.accentTeal
-                                            : ((item['es_candidato'] == true)
-                                                ? AppColors.textPrimary
-                                                : AppColors.textSecondary),
-                                      ),
-                                    ),
-                                  ),
-                                if (((_imapDiagnostics![
-                                            'registradas_desde_gmail']
-                                        as List<dynamic>?) ??
-                                    const [])
-                                    .isNotEmpty) ...[
-                                  const Divider(
-                                    height: 22,
-                                    color: AppColors.cardBorder,
-                                  ),
-                                  const Text(
-                                    'TRANSACCIONES REALES EXTRAÍDAS DE GMAIL EN SQLITE:',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 1.0,
-                                      color: AppColors.accentTeal,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  for (final tx in (_imapDiagnostics![
-                                          'registradas_desde_gmail']
-                                      as List<dynamic>))
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 6.0),
-                                      child: Text(
-                                        '✓ [${tx['fecha']}] ${tx['concepto']} (\$${tx['monto']} MXN) -> ${tx['categoria']} (${tx['metodo_pago']})',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.textPrimary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // 2. Ajuste del Ingreso Base Mensual para la Regla 50/30/20
+              // 2. Ajuste del Presupuesto Base Mensual (Persistido en SQLite)
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
@@ -445,7 +282,7 @@ class _SettingsViewState extends State<SettingsView> {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'Define tu ingreso neto mensual para recalcular automáticamente los topes de 50% Necesidades, 30% Gustos y 20% Ahorro.',
+                        'Define tu presupuesto mensual base en SQLite para calcular tus topes de 50% Necesidades, 30% Gustos y 20% Ahorro en todos tus dispositivos.',
                         style: TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary,
@@ -457,12 +294,13 @@ class _SettingsViewState extends State<SettingsView> {
                           Expanded(
                             child: TextField(
                               controller: _incomeController,
+                              onSubmitted: (_) => _saveMonthlyBudget(),
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                 decimal: true,
                               ),
                               decoration: const InputDecoration(
-                                labelText: 'Ingreso Mensual Total (MXN)',
+                                labelText: 'Presupuesto Mensual Total (MXN)',
                                 prefixIcon: Icon(
                                   Icons.attach_money_rounded,
                                   color: AppColors.accentOrange,
@@ -472,21 +310,13 @@ class _SettingsViewState extends State<SettingsView> {
                           ),
                           const SizedBox(width: 14),
                           ElevatedButton(
-                            onPressed: () {
-                              final double? parsed =
-                                  double.tryParse(_incomeController.text.trim());
-                              if (parsed != null && parsed > 0) {
-                                widget.onMonthlyIncomeChanged(parsed);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Presupuesto 50/30/20 actualizado a \$${parsed.toStringAsFixed(2)} MXN',
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
-                            child: const Text('Actualizar Topes'),
+                            onPressed:
+                                _isSavingBudget ? null : _saveMonthlyBudget,
+                            child: Text(
+                              _isSavingBudget
+                                  ? 'Guardando...'
+                                  : 'Guardar Topes',
+                            ),
                           ),
                         ],
                       ),
@@ -496,22 +326,22 @@ class _SettingsViewState extends State<SettingsView> {
               ),
               const SizedBox(height: 20),
 
-              // 3. Whitelist de Apps Bancarias para Scraping de Notificaciones (S23 Ultra)
+              // 3. Blindaje de Privacidad y Seguridad de IA
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
+                    children: const [
+                      Row(
                         children: [
                           Icon(
-                            Icons.notifications_active_rounded,
-                            color: AppColors.accentOrange,
+                            Icons.verified_user_rounded,
+                            color: AppColors.accentTeal,
                           ),
                           SizedBox(width: 10),
                           Text(
-                            'Scraping de Notificaciones Bancarias (Webhook S23 Ultra)',
+                            'Arquitectura Aislada y Anti-Explotación de IA',
                             style: TextStyle(
                               fontSize: 16.5,
                               fontWeight: FontWeight.w800,
@@ -520,43 +350,24 @@ class _SettingsViewState extends State<SettingsView> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Selecciona las aplicaciones cuyas notificaciones serán interceptadas, hasheadas con SHA-256 (`identificador_externo`) y enviadas vía Webhook a FastAPI:',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
+                      SizedBox(height: 14),
+                      _SecurityFeatureRow(
+                        title: 'Cero Conexiones Bancarias Externas',
+                        subtitle:
+                            'Sin acceso IMAP a correos ni lectura de notificaciones. Solo existen los ingresos y egresos que tú agregas.',
                       ),
-                      const SizedBox(height: 12),
-                      for (final entry
-                          in SupportedBankingApps.allowedPackages.entries)
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          activeThumbColor: AppColors.accentOrange,
-                          title: Text(
-                            entry.value,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: Text(
-                            entry.key,
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 11.5,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          value: _enabledBankPackages[entry.key] ?? true,
-                          onChanged: (val) {
-                            setState(() {
-                              _enabledBankPackages[entry.key] = val;
-                            });
-                          },
-                        ),
+                      SizedBox(height: 10),
+                      _SecurityFeatureRow(
+                        title: 'Defensa Anti-Prompt Injection y Sandbox XML',
+                        subtitle:
+                            'Saneamiento de etiquetas XML, detección previa de patrones de jailbreak, temperatura 0.0 y esquema JSON estricto.',
+                      ),
+                      SizedBox(height: 10),
+                      _SecurityFeatureRow(
+                        title: 'Protección de Transmisión y Cuota',
+                        subtitle:
+                            'Cabeceras HTTP sin caché, esquema OpenAPI oculto, límite de tamaño de audio (5 MB) y Rate Limiting activo.',
+                      ),
                     ],
                   ),
                 ),
@@ -565,6 +376,58 @@ class _SettingsViewState extends State<SettingsView> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SecurityFeatureRow extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SecurityFeatureRow({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(top: 2.0),
+          child: Icon(
+            Icons.check_circle_outline_rounded,
+            size: 18,
+            color: AppColors.accentTeal,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

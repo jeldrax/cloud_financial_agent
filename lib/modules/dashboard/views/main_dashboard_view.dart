@@ -28,15 +28,16 @@ class BudgetCategorySummary {
   double get remainingAmount =>
       (allocatedAmount - netSpentAmount).clamp(0.0, double.infinity);
 
-  double get usageRatio =>
-      allocatedAmount <= 0 ? 0.0 : (netSpentAmount / allocatedAmount).clamp(0.0, 1.0);
+  double get usageRatio => allocatedAmount <= 0
+      ? 0.0
+      : (netSpentAmount / allocatedAmount).clamp(0.0, 1.0);
 
   bool get isNearOrOverLimit => usageRatio >= 0.85;
 }
 
 /// Vista principal con ruteo adaptativo mediante [LayoutBuilder]:
-/// - Pantallas pequeñas (< 720px, ej. S23 Ultra): [BottomNavigationBar]
-/// - Pantallas medianas/grandes (>= 720px, ej. Galaxy Tab S7 FE y Linux KDE Desktop): [NavigationRail]
+/// - Pantallas compactas (< 720px): [BottomNavigationBar]
+/// - Pantallas medianas/grandes (>= 720px): [NavigationRail]
 class MainDashboardView extends StatefulWidget {
   const MainDashboardView({super.key});
 
@@ -52,68 +53,16 @@ class _MainDashboardViewState extends State<MainDashboardView> {
 
   int _selectedIndex = 0;
   bool _isSyncing = false;
+  bool _isBackendOnline = true;
 
-  /// Ingreso mensual base para la distribución 50% / 30% / 20%.
-  double _monthlyTotalIncome = 24000.00;
+  /// Ingreso mensual base para la distribución 50% / 30% / 20% (sincronizado con SQLite).
+  double _monthlyTotalIncome = 2400.00;
 
-  /// Gasto neto mensual reportado directamente por SQLite en TrueNAS (si está sincronizado).
+  /// Gasto neto mensual reportado directamente por SQLite en el servidor.
   Map<BudgetCategory, double>? _remoteNetSpend;
 
-  /// Historial reactivo de transacciones (alimentado por Voz IA, Texto IA y Webhooks Bancarios).
-  final List<TransactionRecord> _transactions = [
-    TransactionRecord(
-      id: 104,
-      fecha: DateTime.now().subtract(const Duration(hours: 2)),
-      monto: 640.00,
-      concepto: 'CFE Suministrador de Servicios Básicos',
-      categoria: BudgetCategory.necesidades,
-      metodoPago: 'Tarjeta Nu',
-      tipo: TransactionType.gasto,
-      identificadorExterno: 'WH-8F91D2A4E7B019C3',
-      source: IngestionSource.bankWebhook,
-    ),
-    TransactionRecord(
-      id: 103,
-      fecha: DateTime.now().subtract(const Duration(hours: 5)),
-      monto: 320.00,
-      concepto: 'Cena tacos y bebidas con amigos',
-      categoria: BudgetCategory.gustos,
-      metodoPago: 'Efectivo',
-      tipo: TransactionType.gasto,
-      source: IngestionSource.voiceAi,
-    ),
-    TransactionRecord(
-      id: 102,
-      fecha: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
-      monto: 250.00,
-      concepto: 'Reembolso parcial compra Amazon',
-      categoria: BudgetCategory.gustos,
-      metodoPago: 'Mercado Pago',
-      tipo: TransactionType.ingreso,
-      identificadorExterno: 'WH-3C77A109F4D822E1',
-      source: IngestionSource.bankWebhook,
-    ),
-    TransactionRecord(
-      id: 101,
-      fecha: DateTime.now().subtract(const Duration(days: 2)),
-      monto: 2400.00,
-      concepto: 'Aportación mensual Fondo de Emergencia',
-      categoria: BudgetCategory.ahorro,
-      metodoPago: 'Transferencia SPEI',
-      tipo: TransactionType.gasto,
-      source: IngestionSource.textAi,
-    ),
-    TransactionRecord(
-      id: 100,
-      fecha: DateTime.now().subtract(const Duration(days: 3)),
-      monto: 5800.00,
-      concepto: 'Renta y mantenimiento departamento',
-      categoria: BudgetCategory.necesidades,
-      metodoPago: 'Transferencia SPEI',
-      tipo: TransactionType.gasto,
-      source: IngestionSource.textAi,
-    ),
-  ];
+  /// Historial real de transacciones (100% vacío hasta sincronizar con SQLite; cero datos de prueba).
+  final List<TransactionRecord> _transactions = [];
 
   @override
   void initState() {
@@ -121,24 +70,32 @@ class _MainDashboardViewState extends State<MainDashboardView> {
     _syncWithFastApiBackend(silent: true);
   }
 
-  /// Sincroniza el gasto neto 50/30/20 y las transacciones recientes desde FastAPI en TrueNAS.
+  /// Sincroniza presupuesto, gasto neto 50/30/20 y transacciones reales desde FastAPI / SQLite.
   Future<void> _syncWithFastApiBackend({bool silent = false}) async {
     if (_isSyncing) return;
     setState(() => _isSyncing = true);
 
     try {
-      final netSpend = await _apiClient.fetchMonthlyNetSpendByCategory();
-      final remoteTransactions =
-          await _apiClient.fetchRecentTransactions(limit: 50);
+      final results = await Future.wait<dynamic>([
+        _apiClient.fetchMonthlyBudget(),
+        _apiClient.fetchMonthlyNetSpendByCategory(),
+        _apiClient.fetchRecentTransactions(limit: 100),
+      ]);
+
+      final double remoteBudget = results[0] as double;
+      final Map<BudgetCategory, double> netSpend =
+          results[1] as Map<BudgetCategory, double>;
+      final List<TransactionRecord> remoteTransactions =
+          results[2] as List<TransactionRecord>;
 
       if (!mounted) return;
       setState(() {
+        _isBackendOnline = true;
+        _monthlyTotalIncome = remoteBudget;
         _remoteNetSpend = netSpend;
-        if (remoteTransactions.isNotEmpty) {
-          _transactions
-            ..clear()
-            ..addAll(remoteTransactions);
-        }
+        _transactions
+          ..clear()
+          ..addAll(remoteTransactions);
       });
 
       if (!silent) {
@@ -146,20 +103,26 @@ class _MainDashboardViewState extends State<MainDashboardView> {
           const SnackBar(
             backgroundColor: AppColors.surface,
             content: Text(
-              'Sincronizado con FastAPI / SQLite en TrueNAS vía Tailscale.',
+              'Sincronizado correctamente con el servidor vía Tailscale.',
             ),
           ),
         );
       }
     } catch (_) {
-      if (!mounted || silent) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Operando con caché local. Verifica conexión Tailscale con TrueNAS.',
+      if (!mounted) return;
+      setState(() {
+        _isBackendOnline = false;
+      });
+      if (!silent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: AppColors.accentRed,
+            content: Text(
+              'No se pudo conectar al servidor. Verifica que Tailscale esté activo.',
+            ),
           ),
-        ),
-      );
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isSyncing = false);
@@ -167,7 +130,7 @@ class _MainDashboardViewState extends State<MainDashboardView> {
     }
   }
 
-  /// Calcula el gasto neto (`Gastos - Ingresos`) por categoría siguiendo la lógica SQL de `src/database.py`.
+  /// Calcula el gasto neto (`Gastos - Ingresos`) por categoría siguiendo `src/database.py`.
   double _netSpentFor(BudgetCategory category) {
     if (_remoteNetSpend != null && _remoteNetSpend!.containsKey(category)) {
       return _remoteNetSpend![category]!.clamp(0.0, double.infinity);
@@ -196,17 +159,55 @@ class _MainDashboardViewState extends State<MainDashboardView> {
         ),
         BudgetCategorySummary(
           category: BudgetCategory.ahorro,
-          subtitle: 'Fondo de emergencia, inversiones y amortización',
+          subtitle: 'Fondo de emergencia, inversiones y metas de ahorro',
           allocatedAmount: _monthlyTotalIncome * 0.20,
           netSpentAmount: _netSpentFor(BudgetCategory.ahorro),
         ),
       ];
 
-  void _addNewTransaction(TransactionRecord record) {
+  Future<void> _onTransactionCreated(TransactionRecord record) async {
     setState(() {
       _remoteNetSpend = null;
       _transactions.insert(0, record);
     });
+    await _syncWithFastApiBackend(silent: true);
+  }
+
+  Future<void> _onTransactionDeleted(TransactionRecord record) async {
+    final int? txId = record.id;
+    if (txId == null) return;
+
+    try {
+      await _apiClient.deleteTransaction(txId);
+      if (!mounted) return;
+      setState(() {
+        _remoteNetSpend = null;
+        _transactions.removeWhere((item) => item.id == txId);
+      });
+      await _syncWithFastApiBackend(silent: true);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surface,
+          content: Text('Movimiento eliminado: "${record.concepto}".'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppColors.accentRed,
+          content: Text(
+            'No se pudo eliminar el movimiento. Verifica tu conexión Tailscale.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onMonthlyIncomeUpdated(double newIncome) async {
+    setState(() => _monthlyTotalIncome = newIncome);
+    await _syncWithFastApiBackend(silent: true);
   }
 
   @override
@@ -217,18 +218,19 @@ class _MainDashboardViewState extends State<MainDashboardView> {
         categories: _budgetCategories,
         recentTransactions: _transactions.take(5).toList(),
         isSyncing: _isSyncing,
+        isBackendOnline: _isBackendOnline,
         onRefreshSync: () => _syncWithFastApiBackend(silent: false),
         onNavigateToTransactions: () => setState(() => _selectedIndex = 1),
+        onDeleteTransaction: _onTransactionDeleted,
       ),
       TransactionsView(
         transactions: _transactions,
-        onTransactionCreated: _addNewTransaction,
+        onTransactionCreated: _onTransactionCreated,
+        onTransactionDeleted: _onTransactionDeleted,
       ),
       SettingsView(
         monthlyIncome: _monthlyTotalIncome,
-        onMonthlyIncomeChanged: (newIncome) {
-          setState(() => _monthlyTotalIncome = newIncome);
-        },
+        onMonthlyIncomeChanged: _onMonthlyIncomeUpdated,
       ),
     ];
 
@@ -239,7 +241,6 @@ class _MainDashboardViewState extends State<MainDashboardView> {
         final bool isExtendedRail =
             constraints.maxWidth >= _extendedRailBreakpoint;
 
-        // Vista para Tablet (Galaxy Tab S7 FE) y Escritorio Linux (CachyOS KDE Plasma)
         if (isWideScreen) {
           return Scaffold(
             body: SafeArea(
@@ -264,7 +265,8 @@ class _MainDashboardViewState extends State<MainDashboardView> {
                             width: 42,
                             height: 42,
                             decoration: BoxDecoration(
-                              color: AppColors.accentOrange.withValues(alpha: 0.16),
+                              color:
+                                  AppColors.accentOrange.withValues(alpha: 0.16),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: AppColors.accentOrange,
@@ -291,7 +293,7 @@ class _MainDashboardViewState extends State<MainDashboardView> {
                                   ),
                                 ),
                                 Text(
-                                  'Tailscale • TrueNAS',
+                                  '100% Manual • Zero-Trust',
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
                                     fontSize: 11.5,
@@ -310,14 +312,14 @@ class _MainDashboardViewState extends State<MainDashboardView> {
                         label: Text('Dashboard 50/30/20'),
                       ),
                       NavigationRailDestination(
-                        icon: Icon(Icons.mic_none_rounded),
-                        selectedIcon: Icon(Icons.mic_rounded),
-                        label: Text('Captura IA y Webhooks'),
+                        icon: Icon(Icons.add_card_outlined),
+                        selectedIcon: Icon(Icons.add_card_rounded),
+                        label: Text('Ingresos y Egresos'),
                       ),
                       NavigationRailDestination(
-                        icon: Icon(Icons.lan_outlined),
-                        selectedIcon: Icon(Icons.lan_rounded),
-                        label: Text('Red Tailscale'),
+                        icon: Icon(Icons.security_outlined),
+                        selectedIcon: Icon(Icons.security_rounded),
+                        label: Text('Seguridad y Ajustes'),
                       ),
                     ],
                   ),
@@ -338,7 +340,6 @@ class _MainDashboardViewState extends State<MainDashboardView> {
           );
         }
 
-        // Vista para Móvil (Samsung S23 Ultra)
         return Scaffold(
           body: SafeArea(
             child: IndexedStack(
@@ -362,14 +363,14 @@ class _MainDashboardViewState extends State<MainDashboardView> {
                   label: 'Dashboard',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.mic_none_rounded),
-                  activeIcon: Icon(Icons.mic_rounded),
-                  label: 'Transacciones',
+                  icon: Icon(Icons.add_card_outlined),
+                  activeIcon: Icon(Icons.add_card_rounded),
+                  label: 'Movimientos',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.lan_outlined),
-                  activeIcon: Icon(Icons.lan_rounded),
-                  label: 'Configuración',
+                  icon: Icon(Icons.security_outlined),
+                  activeIcon: Icon(Icons.security_rounded),
+                  label: 'Seguridad',
                 ),
               ],
             ),
@@ -380,22 +381,26 @@ class _MainDashboardViewState extends State<MainDashboardView> {
   }
 }
 
-/// Módulo `dashboard`: Tarjeta de Balance General, Distribución 50/30/20 y Barras de Progreso.
+/// Módulo `dashboard`: Tarjeta de Balance General, Distribución 50/30/20 y Movimientos Reales.
 class _DashboardOverviewTab extends StatelessWidget {
   final double monthlyTotalIncome;
   final List<BudgetCategorySummary> categories;
   final List<TransactionRecord> recentTransactions;
   final bool isSyncing;
+  final bool isBackendOnline;
   final VoidCallback onRefreshSync;
   final VoidCallback onNavigateToTransactions;
+  final ValueChanged<TransactionRecord> onDeleteTransaction;
 
   const _DashboardOverviewTab({
     required this.monthlyTotalIncome,
     required this.categories,
     required this.recentTransactions,
     required this.isSyncing,
+    required this.isBackendOnline,
     required this.onRefreshSync,
     required this.onNavigateToTransactions,
+    required this.onDeleteTransaction,
   });
 
   @override
@@ -437,7 +442,7 @@ class _DashboardOverviewTab extends StatelessWidget {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              'Presupuesto Inteligente 50/30/20 • Mes en curso',
+                              'Control Personal 50/30/20 • Sin Conexión Bancaria Externa',
                               style: TextStyle(
                                 fontSize: 13.5,
                                 color: AppColors.textSecondary,
@@ -450,7 +455,7 @@ class _DashboardOverviewTab extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            tooltip: 'Sincronizar con TrueNAS FastAPI',
+                            tooltip: 'Sincronizar con el servidor',
                             onPressed: isSyncing ? null : onRefreshSync,
                             icon: isSyncing
                                 ? const SizedBox(
@@ -475,20 +480,30 @@ class _DashboardOverviewTab extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppColors.surfaceDark,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppColors.cardBorder),
+                              border: Border.all(
+                                color: isBackendOnline
+                                    ? AppColors.cardBorder
+                                    : AppColors.accentRed,
+                              ),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Icons.shield_rounded,
+                                  isBackendOnline
+                                      ? Icons.shield_rounded
+                                      : Icons.cloud_off_rounded,
                                   size: 16,
-                                  color: AppColors.accentOrange,
+                                  color: isBackendOnline
+                                      ? AppColors.accentOrange
+                                      : AppColors.accentRed,
                                 ),
-                                SizedBox(width: 6),
+                                const SizedBox(width: 6),
                                 Text(
-                                  'Tailscale Zero-Trust',
-                                  style: TextStyle(
+                                  isBackendOnline
+                                      ? 'Tailscale Zero-Trust'
+                                      : 'Sin Conexión',
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.textPrimary,
@@ -501,6 +516,37 @@ class _DashboardOverviewTab extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (!isBackendOnline) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentRed.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.accentRed),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: AppColors.accentRed,
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'No hay conexión activa con tu servidor vía Tailscale. Conéctate a Tailscale y pulsa el icono de sincronizar.',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
 
                   _HeroBalanceCard(
@@ -508,7 +554,7 @@ class _DashboardOverviewTab extends StatelessWidget {
                     totalNetSpent: totalNetSpent,
                     totalRemaining: totalRemaining,
                     categories: categories,
-                    onQuickVoiceCapture: onNavigateToTransactions,
+                    onQuickCapture: onNavigateToTransactions,
                   ),
                   const SizedBox(height: 28),
 
@@ -553,7 +599,7 @@ class _DashboardOverviewTab extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'ÚLTIMOS MOVIMIENTOS (IA Y WEBHOOKS)',
+                        'ÚLTIMOS MOVIMIENTOS REGISTRADOS POR TI',
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w800,
@@ -569,7 +615,7 @@ class _DashboardOverviewTab extends StatelessWidget {
                           color: AppColors.accentOrange,
                         ),
                         label: const Text(
-                          'Ver todo / Capturar',
+                          'Registrar / Ver todo',
                           style: TextStyle(color: AppColors.accentOrange),
                         ),
                       ),
@@ -577,20 +623,66 @@ class _DashboardOverviewTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Card(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: recentTransactions.length,
-                      separatorBuilder: (_, __) => const Divider(
-                        height: 1,
-                        color: AppColors.cardBorder,
-                      ),
-                      itemBuilder: (context, index) {
-                        return TransactionListTile(
-                          record: recentTransactions[index],
-                        );
-                      },
-                    ),
+                    child: recentTransactions.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  const Icon(
+                                    Icons.receipt_long_outlined,
+                                    size: 40,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  const Text(
+                                    'Aún no has registrado ingresos ni egresos.',
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Todos los movimientos son 100% manuales (formulario directo, texto o voz).',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  OutlinedButton.icon(
+                                    onPressed: onNavigateToTransactions,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.accentOrange,
+                                      side: const BorderSide(
+                                        color: AppColors.accentOrange,
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.add_rounded),
+                                    label: const Text('Agregar Movimiento'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: recentTransactions.length,
+                            separatorBuilder: (_, __) => const Divider(
+                              height: 1,
+                              color: AppColors.cardBorder,
+                            ),
+                            itemBuilder: (context, index) {
+                              return TransactionListTile(
+                                record: recentTransactions[index],
+                                onDelete: onDeleteTransaction,
+                              );
+                            },
+                          ),
                   ),
                 ],
               ),
@@ -608,14 +700,14 @@ class _HeroBalanceCard extends StatelessWidget {
   final double totalNetSpent;
   final double totalRemaining;
   final List<BudgetCategorySummary> categories;
-  final VoidCallback onQuickVoiceCapture;
+  final VoidCallback onQuickCapture;
 
   const _HeroBalanceCard({
     required this.monthlyTotalIncome,
     required this.totalNetSpent,
     required this.totalRemaining,
     required this.categories,
-    required this.onQuickVoiceCapture,
+    required this.onQuickCapture,
   });
 
   @override
@@ -669,13 +761,13 @@ class _HeroBalanceCard extends StatelessWidget {
                   ],
                 ),
                 ElevatedButton.icon(
-                  onPressed: onQuickVoiceCapture,
+                  onPressed: onQuickCapture,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentOrange,
                     foregroundColor: AppColors.surfaceDark,
                   ),
-                  icon: const Icon(Icons.mic_rounded),
-                  label: const Text('Capturar con Voz / IA'),
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                  label: const Text('Registrar Ingreso / Egreso'),
                 ),
               ],
             ),
@@ -716,8 +808,7 @@ class _HeroBalanceCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (i < categories.length - 1)
-                        const SizedBox(width: 3),
+                      if (i < categories.length - 1) const SizedBox(width: 3),
                     ],
                   ],
                 ),

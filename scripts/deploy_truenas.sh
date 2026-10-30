@@ -2,19 +2,20 @@
 set -euo pipefail
 
 # ==============================================================================
-# Script Dual de Despliegue Zero-Trust para TrueNAS SCALE (root o truenas_admin)
-# - Si se ejecuta en TrueNAS (/mnt/Biblioteca/cloud_financial_agent), reconstruye
-#   y reinicia los contenedores preservando data/gastos.db y .env.
-# - Si se ejecuta desde la estación de trabajo local (CachyOS), sincroniza los
-#   archivos hacia TrueNAS y ejecuta este mismo script remotamente.
+# Script Dual de Despliegue Zero-Trust para Servidor Homelab / TrueNAS SCALE
+# - Preserva data/gastos.db y .env remoto.
+# - Elimina módulos obsoletos en src/ (--delete) manteniendo modo 100% manual.
 # ==============================================================================
 
-REMOTE_HOST="${1:-truenas_root}"
-REMOTE_DIR="${2:-/mnt/Biblioteca/cloud_financial_agent}"
+if [[ -f .env ]]; then
+  REMOTE_HOST_ENV=$(grep "^TRUENAS_REMOTE_HOST=" .env | cut -d= -f2- || true)
+  REMOTE_DIR_ENV=$(grep "^TRUENAS_REMOTE_DIR=" .env | cut -d= -f2- || true)
+fi
+REMOTE_HOST="${1:-${REMOTE_HOST_ENV:-truenas_server}}"
+REMOTE_DIR="${2:-${REMOTE_DIR_ENV:-/mnt/tank/apps/cloud_financial_agent}}"
 
-# Detectar si ya estamos dentro del servidor TrueNAS
 if [[ "$(pwd)" == "/mnt/"* ]] || [[ "$(hostname)" == *"truenas"* ]]; then
-  echo "==> [TrueNAS Local ($(whoami))] Verificando configuración en $(pwd)..."
+  echo "==> [Servidor Local ($(whoami))] Verificando configuración en $(pwd)..."
   mkdir -p data
 
   if ! grep -q "^API_TOKEN=.\+" .env; then
@@ -28,16 +29,18 @@ if [[ "$(pwd)" == "/mnt/"* ]] || [[ "$(hostname)" == *"truenas"* ]]; then
     DOCKER_CMD="sudo -n /usr/bin/docker"
   fi
 
-  echo "==> [TrueNAS Local] Construyendo y desplegando hermes_financiero + grafana_homelab..."
+  echo "==> [Servidor Local] Construyendo y desplegando contenedores..."
   $DOCKER_CMD compose up -d --build
   $DOCKER_CMD compose ps
-  echo "==> [TrueNAS Local] Despliegue finalizado exitosamente."
+  echo "==> [Servidor Local] Despliegue finalizado exitosamente."
   exit 0
 fi
 
-# Si estamos en la máquina de desarrollo local (CachyOS):
-echo "==> [1/4] Sincronizando código del backend y scripts hacia ${REMOTE_HOST}:${REMOTE_DIR} (preservando .env y data/)..."
-rsync -avz \
+echo "==> [1/3] Sincronizando código del backend hacia ${REMOTE_HOST}:${REMOTE_DIR} (preservando .env y data/)..."
+rsync -avz --delete \
+  --exclude='data/***' \
+  --exclude='.env' \
+  --exclude='grafana/***' \
   --include='src/***' \
   --include='locales/***' \
   --include='scripts/***' \
@@ -48,17 +51,17 @@ rsync -avz \
   --exclude='*' \
   ./ "${REMOTE_HOST}:${REMOTE_DIR}/"
 
-echo "==> [2/4] Sincronizando API_TOKEN Zero-Trust en el .env remoto (sin alterar credenciales IMAP/Telegram)..."
+echo "==> [2/3] Sincronizando API_TOKEN Zero-Trust en el .env remoto..."
 LOCAL_API_TOKEN=$(grep "^API_TOKEN=" .env | cut -d= -f2-)
 ssh "$REMOTE_HOST" "
   if ! grep -q '^API_TOKEN=' '${REMOTE_DIR}/.env'; then
     printf '\n# FastAPI Zero-Trust Token (Flutter App)\nAPI_TOKEN=%s\n' '${LOCAL_API_TOKEN}' >> '${REMOTE_DIR}/.env'
-    echo '    API_TOKEN añadido al .env de TrueNAS.'
   else
     sed -i 's|^API_TOKEN=.*|API_TOKEN=${LOCAL_API_TOKEN}|' '${REMOTE_DIR}/.env'
-    echo '    API_TOKEN sincronizado en el .env de TrueNAS.'
   fi
+  # Desactivar variables IMAP heredadas para garantizar cero conexiones bancarias
+  sed -i '/^IMAP_/d' '${REMOTE_DIR}/.env'
 "
 
-echo "==> [3/4] Ejecutando despliegue en TrueNAS..."
+echo "==> [3/3] Ejecutando despliegue en el servidor..."
 ssh "$REMOTE_HOST" "cd '${REMOTE_DIR}' && bash scripts/deploy_truenas.sh"

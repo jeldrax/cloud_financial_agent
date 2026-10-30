@@ -257,7 +257,7 @@ class _CloudFinancialAgentAppState extends State<CloudFinancialAgentApp>
         }
       });
     } on MissingPluginException {
-      // En escritorio Linux (CachyOS KDE Plasma) local_auth no registra canal nativo;
+      // En escritorio Linux local_auth no registra canal nativo;
       // se permite el desbloqueo explícito bajo la sesión activa del sistema.
       if (!mounted) return;
       setState(() {

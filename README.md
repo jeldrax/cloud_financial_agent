@@ -1,84 +1,81 @@
 # Cloud Financial Agent (Hermes) 🏛️💰
 
-Sistema integral y autónomo de finanzas personales *self-hosted* basado en la metodología presupuestal **50/30/20**. Integra un **backend inteligente en Python (FastAPI + Google Gemini API + Gmail IMAP + SQLite + Telegram Bot)** desplegado en servidor **TrueNAS SCALE / Docker Homelab** y un **frontend multiplataforma en Flutter** para **Android (Smartphones y Tablets)** y **Linux Desktop** con arquitectura de seguridad **Zero-Trust**.
+Sistema privado y *self-hosted* de finanzas personales basado en la regla presupuestal **50/30/20**, diseñado para que el usuario registre y controle **exclusivamente por cuenta propia** sus ingresos y egresos sin vincular cuentas bancarias, correos ni servicios de terceros.
+
+Combina un **backend aislado en Python (FastAPI + SQLite WAL + Google Gemini API + Bot privado de Telegram)** desplegado en servidor propio (**TrueNAS SCALE / Docker Homelab**) con una **aplicación multiplataforma en Flutter** para **Android (Smartphones y Tablets)** y **Linux Desktop**, protegida mediante arquitectura **Zero-Trust** y defensas multicapa contra explotación de IA.
 
 ---
 
 ### 🎬 Demostración en Video
 
-https://github.com/user-attachments/assets/docs/media/hermes_launch.mp4
+[![Video de Presentación](docs/media/hermes_launch_poster.jpg)](docs/media/hermes_launch.mp4)
 
-> **Nota:** Puedes reproducir el video de lanzamiento en formato MP4 directamente en [docs/media/hermes_launch.mp4](docs/media/hermes_launch.mp4).
+> **Nota:** Puedes reproducir el video de presentación en formato MP4 directamente en [`docs/media/hermes_launch.mp4`](docs/media/hermes_launch.mp4).
 
 ---
 
 ## 📑 Tabla de Contenidos
 
 - [Visión General del Sistema](#-visión-general-del-sistema)
-- [Arquitectura y Metodología](#-arquitectura-y-metodología)
+- [Arquitectura y Seguridad](#-arquitectura-y-seguridad)
   - [Regla Presupuestal 50/30/20](#regla-presupuestal-503020)
-  - [Reglas de Exclusión Antiduplicidad](#reglas-de-exclusión-antiduplicidad)
-  - [Seguridad Zero-Trust y Bóveda Biométrica](#seguridad-zero-trust-y-bóveda-biométrica)
+  - [Privacidad Total: Cero Conexiones Bancarias](#privacidad-total-cero-conexiones-bancarias)
+  - [Seguridad en la Transmisión de Datos (Zero-Trust)](#seguridad-en-la-transmisión-de-datos-zero-trust)
+  - [Seguridad contra Explotación de IA (Anti-Prompt Injection)](#seguridad-contra-explotación-de-ia-anti-prompt-injection)
 - [Stack Tecnológico](#-stack-tecnológico)
 - [Estructura del Proyecto](#-estructura-del-proyecto)
-- [Guía Paso a Paso de Instalación y Configuración](#-guía-paso-a-paso-de-instalación-y-configuración)
-  - [Paso 1: Obtención de Llaves y Credenciales](#paso-1-obtención-de-llaves-y-credenciales)
-  - [Paso 2: Configuración de Gmail (2FA, Contraseña de App y Filtros)](#paso-2-configuración-de-gmail)
-  - [Paso 3: Despliegue en Servidor TrueNAS SCALE / Homelab](#paso-3-despliegue-en-servidor-truenas-scale--homelab)
-  - [Paso 4: Instalación en Dispositivos Clientes](#paso-4-instalación-en-dispositivos-clientes)
-    - [Android (Smartphones y Tablets)](#a-android-smartphones-y-tablets)
-    - [Linux Desktop](#b-linux-desktop)
-- [Uso y Pruebas del Sistema](#-uso-y-pruebas-del-sistema)
-  - [Panel de Diagnóstico de Gmail IMAP y Cuentas](#panel-de-diagnóstico-de-gmail-imap-y-cuentas)
-  - [Ingesta por Voz, Texto y Notificaciones Bancarias](#ingesta-por-voz-texto-y-notificaciones-bancarias)
-  - [Bot de Telegram y Visualización en Grafana](#bot-de-telegram-y-visualización-en-grafana)
-- [Pruebas Automatizadas y CI/CD](#-pruebas-automatizadas-y-cicd)
+- [Guía Paso a Paso de Instalación](#-guía-paso-a-paso-de-instalación)
+  - [Paso 1: Obtención de Llaves Necesarias](#paso-1-obtención-de-llaves-necesarias)
+  - [Paso 2: Despliegue en Servidor / Homelab](#paso-2-despliegue-en-servidor--homelab)
+  - [Paso 3: Compilación e Instalación en Dispositivos](#paso-3-compilación-e-instalación-en-dispositivos)
+- [Uso del Sistema](#-uso-del-sistema)
+- [Pruebas de Seguridad e Integración](#-pruebas-de-seguridad-e-integración)
 - [Licencia](#-licencia)
 
 ---
 
 ## 🌟 Visión General del Sistema
 
-```
-                      ┌──────────────────────────────────────────────┐
-                      │          Notificaciones Bancarias            │
-                      │       (Alertas de Compra, SPEI, etc.)        │
-                      └──────────────────────┬───────────────────────┘
-                                             │ IMAP SSL / Webhook
-                                             ▼
-┌───────────────────────────┐      ┌────────────────────────────────────────────────────────┐
-│   Dispositivos Clientes   │      │                  Servidor / Homelab                    │
-│                           │      │                                                        │
-│ • Móvil Android (APK)     │◄────►│  • FastAPI REST API (Bearer Auth Zero-Trust / Port 8000)│
-│ • Tablet Android (APK)    │ Tail-│  • Motor Gemini Multimodal (Esquemas Pydantic 50/30/20)│
-│ • Linux Desktop App       │ scale│  • Monitor IMAP Banca_Agente con Deduplicación Única   │
-│   (Bóveda Biométrica +    │      │  • SQLite3 (Persistencia local en data/gastos.db)       │
-│    Starfield Dark Theme)  │      │  • Telegram Bot Polling (Reportes y Gráficos)          │
-└───────────────────────────┘      │  • Grafana Homelab (Dashboards Analíticos / Port 3000)  │
-                                   └────────────────────────────────────────────────────────┘
+```text
+┌───────────────────────────────┐         Túnel Cifrado         ┌────────────────────────────────────────────────────────┐
+│     Dispositivos Clientes     │      WireGuard (Tailscale)    │                   Servidor / Homelab                   │
+│                               │                               │                                                        │
+│ • App Móvil / Tablet Android  │◄─────────────────────────────►│ • FastAPI REST API (Bearer Auth en Tiempo Constante)   │
+│ • App Nativa Linux Desktop    │   Bearer Token Ofuscado +     │ • Registro Manual Exacto + Eliminación de Movimientos  │
+│ • Bóveda Biométrica Local     │   Cabeceras HTTP No-Store     │ • Sandbox Gemini (Anti-Prompt Injection + JSON Schema) │
+│   (Formulario Manual + IA)    │                               │ • Persistencia Local SQLite3 (Modo WAL, 0 Terceros)    │
+└───────────────────────────────┘                               │ • Bot Privado de Telegram + Grafana Analítico (:3000)  │
+                                                                └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📐 Arquitectura y Metodología
+## 🛡️ Arquitectura y Seguridad
 
 ### Regla Presupuestal 50/30/20
-Cada movimiento financiero se clasifica automáticamente con un esquema estructurado:
-1. **Necesidades (50%):** Vivienda, despensa esencial, servicios públicos, educación, salud y transporte obligatorio.
-2. **Gustos (30%):** Salidas, restaurantes, streaming, pasatiempos, compras personales y ocio.
-3. **Ahorro (20%):** Fondo de emergencia, inversiones, amortización de capital o ahorro programado.
+Cada movimiento registrado manualmente se asigna a uno de los tres bloques presupuestales:
+1. **Necesidades (50%):** Vivienda, servicios básicos, alimentación esencial, salud, educación y transporte obligatorio.
+2. **Gustos (30%):** Entretenimiento, salidas, restaurantes, suscripciones de ocio y compras personales.
+3. **Ahorro (20%):** Fondo de emergencia, inversiones y metas patrimoniales.
 
-### Reglas de Exclusión Antiduplicidad
-Para evitar contabilizar dos veces el dinero o inflar falsamente los egresos:
-- **Transferencias entre cuentas propias:** Movimientos entre cuentas propias del mismo titular se marcan como `IGNORAR`.
-- **Pagos de tarjetas de crédito:** Liquidar una tarjeta de crédito se ignora; lo que se contabiliza son las compras individuales que generaron ese saldo.
-- **Depósitos salariales regulares:** Financian el presupuesto base mensual y no se suman como gasto invertido.
+El balance mensual calcula dinámicamente `Gastos - Ingresos` por categoría sobre el presupuesto base persistido en SQLite.
 
-### Seguridad Zero-Trust y Bóveda Biométrica
-- **Sin Secretos en Git:** Las credenciales del cliente Flutter se inyectan en tiempo de compilación con `envied` ofuscadas en binario. Nunca se suben archivos `.env` ni `*.env.g.dart`.
-- **Bóveda Biométrica Local:** En Android y Linux, al pasar la app a segundo plano (`AppLifecycleState.paused` o `hidden`), la pantalla se bloquea inmediatamente exigiendo huella dactilar, biometría facial o credenciales de sistema (`local_auth`) para volver a ingresar.
-- **Red Privada Tailscale:** Comunicación cifrada de extremo a extremo sin exponer puertos hacia Internet en el router.
-- **Autenticación en Tiempo Constante:** El backend FastAPI valida el Bearer token con `secrets.compare_digest` para neutralizar ataques de tiempo (*timing attacks*).
+### Privacidad Total: Cero Conexiones Bancarias
+- **Sin lectura de correos (IMAP) ni intercepción de notificaciones:** Elimina por completo falsos positivos por correos promocionales, alertas duplicadas o exposición de credenciales bancarias/de correo.
+- **Cero datos simulados:** La interfaz refleja únicamente los movimientos reales almacenados por el usuario en su propia base de datos SQLite.
+
+### Seguridad en la Transmisión de Datos (Zero-Trust)
+- **Red Privada Cifrada (Tailscale):** Todo el tráfico viaja cifrado punto a punto sobre WireGuard sin abrir puertos públicos en el router.
+- **Ofuscación Binaria (`envied`):** `Env.apiUrl` y `Env.apiToken` se compilan ofuscados en código máquina; jamás se almacenan secretos ni direcciones IP en el repositorio Git.
+- **Autenticación en Tiempo Constante:** Validación de cabeceras `Authorization: Bearer` con `secrets.compare_digest` para prevenir *timing attacks*.
+- **Endurecimiento HTTP:** Esquema `/openapi.json` y documentación Swagger deshabilitados en producción, junto con cabeceras `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` y `Referrer-Policy: no-referrer`.
+- **Bóveda Biométrica Continua:** Bloqueo automático al minimizar la app (`WidgetsBindingObserver` + `local_auth`).
+
+### Seguridad contra Explotación de IA (Anti-Prompt Injection)
+1. **Saneamiento y Escape XML Anti-Breakout:** Los textos del usuario se limpian de caracteres de control, se limitan a `500` caracteres y escapan `<` y `>` (`&lt;`, `&gt;`) antes de encapsularse en `<entrada_usuario_no_confiable>...</entrada_usuario_no_confiable>`.
+2. **Firewall Heurístico Pre-LLM:** Bloquea intentos de *Prompt Injection*, *Jailbreak* o extracción de instrucciones del sistema antes de realizar llamadas a la API de Gemini.
+3. **Inferencia Determinista sin Herramientas:** Gemini opera con `temperature=0.0`, `max_output_tokens=256`, sin permisos de ejecución de código ni herramientas externas, forzado a un esquema tipado `Pydantic` (`application/json`).
+4. **Firewall de Salida Post-LLM y Rate Limiting:** Verifica matemáticamente rangos válidos (`0 < monto <= 1,000,000`), sanea caracteres especiales en las respuestas, valida listas blancas de MIME/tamaño (`5 MB` máx.) en notas de voz y limita las peticiones por minuto (`HTTP 429`).
 
 ---
 
@@ -87,12 +84,10 @@ Para evitar contabilizar dos veces el dinero o inflar falsamente los egresos:
 | Capa | Tecnologías |
 | :--- | :--- |
 | **Backend & API** | Python 3.11+, FastAPI, Pydantic v2, Uvicorn |
-| **Inteligencia Artificial** | Google Gemini API (`gemini-2.5-flash` / `gemini-1.5-flash`) estructurado con JSON Schema |
-| **Ingesta de Correo** | Python `imaplib`, `email` RFC 2822 parser con filtrado inteligente previo |
+| **Asistente IA Opcional** | Google Gemini API (`google-genai`) con salida estructurada determinista |
 | **Frontend Multiplataforma** | Flutter 3.47+, Dart 3.11+, Material 3 Starfield Dark Theme |
-| **Seguridad de Cliente** | `envied`, `local_auth` (Biometría Android/Linux) |
-| **Audio & Notificaciones** | `record: ^7.1.2`, Webhooks SHA-256 idempotentes |
-| **Almacenamiento** | SQLite 3 (`WAL mode`), índices optimizados de fecha y hash |
+| **Seguridad en Cliente** | `envied` (ofuscación binaria), `local_auth` (biometría local) |
+| **Persistencia** | SQLite 3 (`WAL mode`), restricciones `CHECK` e índices optimizados |
 | **Infraestructura** | Docker Compose, TrueNAS SCALE / Linux Server, Tailscale VPN, Grafana |
 
 ---
@@ -101,241 +96,115 @@ Para evitar contabilizar dos veces el dinero o inflar falsamente los egresos:
 
 ```text
 cloud_financial_agent/
-├── android/                   # Proyecto nativo Android (Smartphones / Tablets)
-│   ├── app/build.gradle.kts   # Configuración de compilación, permisos y MinSDK 24
-│   └── app/src/main/          # MainActivity (FlutterFragmentActivity) y Manifest
+├── android/                   # Proyecto nativo Android
 ├── linux/                     # Proyecto nativo Linux Desktop
-│   ├── CMakeLists.txt         # Integración GTK3 y plugins nativos
-│   └── runner/                # Punto de entrada C++ de la aplicación de escritorio
-├── lib/                       # Código fuente multiplataforma en Flutter
+├── lib/                       # Aplicación Flutter Multiplataforma
 │   ├── core/
-│   │   ├── config/            # Envied Zero-Trust (env.dart)
-│   │   └── network/           # ApiClient (HTTP Bearer client + Tailscale)
+│   │   ├── config/            # Configuración Zero-Trust ofuscada (env.dart)
+│   │   └── network/           # Cliente HTTP autenticado (api_client.dart)
 │   ├── modules/
-│   │   ├── auth/              # Bóveda biométrica (BiometricLockView)
-│   │   ├── dashboard/         # Pantalla principal 50/30/20 adaptativa
-│   │   ├── settings/          # Panel de diagnóstico Gmail IMAP y configuración
-│   │   └── transactions/      # Ingesta por voz, texto y webhooks bancarios
-│   └── main.dart              # Inicializador global y observador de ciclo de vida
+│   │   ├── auth/              # Pantalla de bloqueo biométrico
+│   │   ├── dashboard/         # Resumen 50/30/20 sincronizado con SQLite
+│   │   ├── settings/          # Diagnóstico Tailscale, presupuesto y estado de seguridad
+│   │   └── transactions/      # Formulario manual directo + dictado IA + borrado
+│   └── main.dart              # Tema global y observador de ciclo de vida
 ├── src/                       # Backend en Python
-│   ├── ai_engine.py           # Prompts del sistema, reglas antiduplicidad y Gemini
-│   ├── api.py                 # Servidor FastAPI REST (Bearer Auth)
-│   ├── database.py            # Esquema SQLite, migraciones e histórico de gastos
-│   ├── mail_parser.py         # Lector IMAP de notificaciones y panel diagnóstico
-│   ├── main.py                # Orquestador del servicio backend
-│   └── tg_bot.py              # Bot de Telegram con gráficos Matplotlib
+│   ├── ai_engine.py           # Motor Gemini con firewall Anti-Prompt Injection
+│   ├── api.py                 # API REST Zero-Trust con Rate Limiting y cabeceras seguras
+│   ├── database.py            # Persistencia SQLite (transacciones y presupuesto)
+│   ├── i18n.py                # Internacionalización (es / en)
+│   ├── main.py                # Punto de entrada del servicio
+│   └── tg_bot.py              # Bot privado de Telegram (registro manual y /reporte)
 ├── tests/
-│   └── test_api.py            # Suite de pruebas unitarias y de integración
+│   └── test_api.py            # Pruebas unitarias, CRUD manual y seguridad anti-inyección
 ├── scripts/
-│   └── deploy_truenas.sh      # Script de despliegue automatizado para TrueNAS / Linux
+│   └── deploy_truenas.sh      # Despliegue automatizado hacia el servidor
 ├── docker-compose.yml         # Orquestación de backend y Grafana
-├── Dockerfile                 # Imagen Docker optimizada para producción
-└── pubspec.yaml               # Dependencias de Flutter
+└── Dockerfile                 # Contenedor ligero de producción con Healthcheck
 ```
 
 ---
 
-## 🚀 Guía Paso a Paso de Instalación y Configuración
+## 🚀 Guía Paso a Paso de Instalación
 
-### Paso 1: Obtención de Llaves y Credenciales
+### Paso 1: Obtención de Llaves Necesarias
 
-Antes de iniciar, prepara las siguientes llaves:
-
-1. **Google Gemini API Key:**
-   - Ingresa a [Google AI Studio](https://aistudio.google.com/) y genera una clave de API gratuita.
-2. **Telegram Bot Token y Chat ID (Opcional para reportes móviles por chat):**
-   - Crea tu bot con [@BotFather](https://t.me/BotFather) para obtener el `TELEGRAM_TOKEN`.
-   - Obtén tu identificador numérico privado con [@userinfobot](https://t.me/userinfobot) (`TELEGRAM_CHAT_ID`).
-3. **Token de Seguridad de la API (Zero-Trust):**
-   - Genera una cadena aleatoria de 32 bytes en tu terminal:
-     ```bash
-     openssl rand -hex 32
-     ```
-   - Este valor será tu `API_TOKEN` compartido entre el servidor y las aplicaciones cliente.
-4. **Red Segura Tailscale:**
-   - Instala Tailscale en tu servidor, computadoras y dispositivos móviles.
-   - Anota la IP de Tailscale asignada a tu servidor (ej. `100.x.y.z`).
-
----
-
-### Paso 2: Configuración de Gmail
-
-Para que el agente procese automáticamente notificaciones bancarias recibidas por correo:
-
-#### 1. Crear una Contraseña de Aplicación
-1. Ve a tu cuenta de Google: [myaccount.google.com/security](https://myaccount.google.com/security).
-2. Asegúrate de tener activada la **Verificación en dos pasos (2FA)**.
-3. Dirígete a [Contraseñas de aplicaciones](https://myaccount.google.com/apppasswords).
-4. Escribe el nombre de la app (ej. `Hermes Financial Agent`) y pulsa **Crear**.
-5. Copia la contraseña de 16 caracteres generada (esta será tu `IMAP_PASSWORD`).
-
-#### 2. Crear la Etiqueta `Banca_Agente`
-1. Abre [Gmail](https://mail.google.com/).
-2. En el menú lateral izquierdo, haz clic en **+ Crear etiqueta nueva**.
-3. Nómbrala exactamente: `Banca_Agente`.
-
-#### 3. Configurar Filtros Automáticos en Gmail
-Crea filtros para que los correos bancarios se etiqueten automáticamente en `Banca_Agente`:
-- En la barra de búsqueda superior de Gmail, haz clic en el icono de **Mostrar opciones de búsqueda**.
-- En el campo **De:** agrega las direcciones o dominios de tus bancos (ej. `(notificaciones@tubanco.com OR avisos@tudebito.com)`).
-- Haz clic en **Crear filtro**.
-- Marca las casillas:
-  - ☑ **Aplicar la etiqueta:** `Banca_Agente`.
-  - ☑ **Nunca marcar como spam**.
-  - *(Opcional)* ☑ **Aplicar también el filtro a las conversaciones que coincidan**.
-
----
-
-### Paso 3: Despliegue en Servidor TrueNAS SCALE / Homelab
-
-#### 1. Preparar el Entorno en el Servidor
-Conéctate por SSH a tu servidor:
-```bash
-ssh usuario@<TU_IP_TAILSCALE>
-cd /ruta/hacia/tu/dataset/cloud_financial_agent
-```
-
-#### 2. Configurar el Archivo `.env` del Servidor
-Crea el archivo `.env` en el servidor:
-```env
-# Telegram
-TELEGRAM_TOKEN=123456789:ABCDefghIJKLmnOPQRstuvWXYZ
-TELEGRAM_CHAT_ID=987654321
-
-# Google Gemini
-GEMINI_API_KEY=AIzaSyD-tu-clave-de-google-ai-studio
-GEMINI_MODEL=gemini-2.5-flash
-
-# Gmail IMAP
-IMAP_USER=tu_correo@gmail.com
-IMAP_PASSWORD=tu_contrasena_de_aplicacion_16_caracteres
-IMAP_SERVER=imap.gmail.com
-IMAP_PORT=993
-IMAP_FOLDER=Banca_Agente
-IMAP_CHECK_INTERVAL_MINUTES=5
-
-# API de Clientes Flutter (Zero-Trust)
-API_TOKEN=tu_token_generado_con_openssl_rand_hex_32
-
-# Presupuesto Base Mensual (Moneda local)
-MONTHLY_INCOME=2400.0
-
-# Configuración Regional
-DEFAULT_LANG=es
-```
-
-#### 3. Ejecutar el Despliegue Automatizado
-El repositorio incluye un script listo para producción:
-```bash
-bash scripts/deploy_truenas.sh
-```
-O directamente con Docker Compose:
-```bash
-docker compose up -d --build
-```
-
-Verifica el estado del contenedor:
-```bash
-docker compose ps
-curl -H "Authorization: Bearer <TU_API_TOKEN>" http://localhost:8000/api/v1/health
-```
-
----
-
-### Paso 4: Instalación en Dispositivos Clientes
-
-#### A. Android (Smartphones y Tablets)
-
-Los APKs compilados en modo Release se encuentran disponibles en:
-- **APK Optimizado para `arm64-v8a` (Recomendado para dispositivos modernos):**
-  `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`
-- **APK Universal Release:**
-  `build/app/outputs/flutter-apk/Hermes-Financial-Agent-v1.0.0.apk`
-
-##### ¿Cómo enviarlo e instalarlo?
-1. **Vía Taildrop (Tailscale):** Con Tailscale activo en tu PC y en tu dispositivo Android, envía el archivo con clic derecho o por comando:
+1. **API Token Zero-Trust (Obligatorio):**
    ```bash
-   tailscale file cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "<NOMBRE_DISPOSITIVO_ANDROID>:"
+   openssl rand -hex 32
    ```
-2. **Vía herramientas locales:** Transfiérelo mediante KDE Connect, Nearby Share / Quick Share o almacenamiento compartido.
-3. **Instalación directa por ADB:**
+2. **Google Gemini API Key (Para captura opcional por voz o texto libre):**
+   - Genera una llave en [Google AI Studio](https://aistudio.google.com/).
+3. **Telegram Bot Token y Chat ID (Opcional):**
+   - Crea un bot privado en [@BotFather](https://t.me/BotFather) y consulta tu ID numérico en [@userinfobot](https://t.me/userinfobot).
+4. **Tailscale VPN:**
+   - Conecta tu servidor y tus dispositivos a la misma red privada Tailscale (`100.x.y.z`).
+
+---
+
+### Paso 2: Despliegue en Servidor / Homelab
+
+1. Copia `.env.example` a `.env` en el directorio del proyecto dentro de tu servidor:
+   ```env
+   TELEGRAM_TOKEN=tu_telegram_bot_token_aqui
+   TELEGRAM_CHAT_ID=tu_chat_id_numerico_aqui
+   GEMINI_API_KEY=tu_gemini_api_key_aqui
+   GEMINI_MODEL=gemini-2.5-flash
+   MONTHLY_INCOME=2400.0
+   DEFAULT_LANG=es
+   API_URL=http://100.x.y.z:8000
+   API_TOKEN=tu_token_generado_con_openssl_rand_hex_32
+   ```
+2. Levanta los contenedores:
    ```bash
-   adb install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+   docker compose up -d --build
+   ```
+3. Verifica el estado del servicio:
+   ```bash
+   curl -H "Authorization: Bearer <TU_API_TOKEN>" http://127.0.0.1:8000/api/v1/health
    ```
 
-##### Permisos solicitados por la aplicación:
-- **Biometría:** Para proteger la bóveda financiera al abrir o reanudar la app.
-- **Micrófono:** Para el registro rápido de gastos mediante notas de voz interpretadas por Gemini.
-- **Notificaciones:** Para interceptar y registrar pagos de aplicaciones bancarias compatibles.
+---
+
+### Paso 3: Compilación e Instalación en Dispositivos
+
+1. Genera el archivo ofuscado de entorno local antes de compilar:
+   ```bash
+   flutter pub get
+   dart run build_runner build --delete-conflicting-outputs
+   ```
+
+2. **Compilar APK para Android:**
+   ```bash
+   flutter build apk --release --split-per-abi
+   ```
+   El instalador optimizado se genera en `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.
+
+3. **Compilar e instalar en Linux Desktop:**
+   ```bash
+   flutter build linux --release
+   mkdir -p "$HOME/.local/share/cloud_financial_agent" "$HOME/.local/bin"
+   cp -r build/linux/x64/release/bundle/* "$HOME/.local/share/cloud_financial_agent/"
+   ln -sf "$HOME/.local/share/cloud_financial_agent/cloud_financial_agent" "$HOME/.local/bin/cloud-financial-agent"
+   ```
 
 ---
 
-#### B. Linux Desktop
+## 📱 Uso del Sistema
 
-La aplicación puede integrarse de forma nativa en tu entorno de escritorio Linux:
-
-- **Binario del sistema:**
-  `~/.local/share/cloud_financial_agent/cloud_financial_agent`
-- **Comando global en terminal:**
-  ```bash
-  cloud-financial-agent
-  ```
-- **Lanzador de aplicaciones (.desktop):**
-  `~/.local/share/applications/cloud-financial-agent.desktop` con icono oficial Starfield.
-
-##### Compilar e instalar en Linux:
-```bash
-# 1. Compilar bundle de release
-flutter build linux --release
-
-# 2. Instalar en el directorio local de aplicaciones
-mkdir -p "$HOME/.local/share/cloud_financial_agent" "$HOME/.local/bin"
-cp -r build/linux/x64/release/bundle/* "$HOME/.local/share/cloud_financial_agent/"
-ln -sf "$HOME/.local/share/cloud_financial_agent/cloud_financial_agent" "$HOME/.local/bin/cloud-financial-agent"
-update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
-```
+- **Formulario Manual Exacto:** En la pestaña **Movimientos**, elige **Egreso (Gasto)** o **Ingreso**, escribe el monto exacto, el concepto, la categoría (`Necesidades`, `Gustos` o `Ahorro`) y el método de pago, y pulsa **Guardar Movimiento**.
+- **Captura Asistida por IA (Opcional):** Dicta con el micrófono o escribe en lenguaje natural (ej. *"Compré despensa por 450 en efectivo"*) para que Gemini estructure el registro automáticamente.
+- **Eliminación de Movimientos:** Cualquier registro erróneo puede borrarse con un toque desde el icono de papelera con confirmación.
+- **Presupuesto Sincronizado:** En la pestaña **Seguridad / Ajustes**, actualiza tu presupuesto mensual base para sincronizar los topes 50/30/20 en todos tus dispositivos y en `/reporte` de Telegram.
 
 ---
 
-## 📱 Uso y Pruebas del Sistema
+## 🧪 Pruebas de Seguridad e Integración
 
-### Panel de Diagnóstico de Gmail IMAP y Cuentas
-1. Abre la aplicación en tu dispositivo Android o Linux.
-2. Dirígete a la pestaña de **Ajustes** (icono de engranaje).
-3. En la sección **Conexión de Cuentas y Gmail IMAP**, pulsa el botón **"Probar Gmail"**.
-4. La app se comunicará con el servidor en tiempo real y mostrará:
-   - Estado de la conexión SSL y carpeta `Banca_Agente`.
-   - Total de correos analizados en el mes.
-   - Cuentas y emisores detectados.
-   - Última sincronización y desglose por entidad bancaria.
+Ejecuta la suite automatizada de pruebas (autenticación Zero-Trust, ocultamiento OpenAPI, CRUD manual, eliminación de rutas bancarias, bloqueo de Prompt Injection, escape XML y Rate Limiting):
 
-### Ingesta por Voz, Texto y Notificaciones Bancarias
-- **Voz con Gemini:** Mantén presionado el botón de micrófono en la pestaña de Movimientos, dicta: *"Compré una despensa de 650 pesos en el supermercado con tarjeta de débito"* y suelta. El backend transcribirá y clasificará el gasto automáticamente en **Necesidades**.
-- **Texto Libre:** Ingresa descripciones cotidianas; el modelo identificará comercio, monto y categoría 50/30/20.
-- **Notificaciones Bancarias:** Cuando recibas un aviso bancario en tu dispositivo, el servicio lo enviará al webhook con un hash SHA-256 para evitar registros duplicados.
-
-### Bot de Telegram y Visualización en Grafana
-- **/reporte:** Envía el balance consolidado del mes junto con el gráfico de barras apiladas generado por Matplotlib.
-- **/ayuda:** Muestra la lista de comandos disponibles.
-- **Grafana (Puerto 3000):** Ingresa a `http://<TU_IP_TAILSCALE>:3000` con `admin` / `admin` para consultar tus métricas en SQLite.
-
----
-
-## 🧪 Pruebas Automatizadas y CI/CD
-
-El repositorio cuenta con una suite completa de pruebas unitarias y de integración que validan:
-1. Autenticación con token Bearer en tiempo constante.
-2. Cálculo neto mensual 50/30/20 (`Gastos - Devoluciones`).
-3. Deduplicación estricta de webhooks bancarios.
-4. Pre-filtrado de remitentes de correo para no desperdiciar cuota de Gemini.
-
-Para ejecutar las pruebas localmente:
 ```bash
 python -m unittest tests/test_api.py -v
-```
-
-Para verificar la integridad del código Flutter:
-```bash
 flutter analyze
 ```
 
@@ -343,4 +212,4 @@ flutter analyze
 
 ## 📄 Licencia
 
-Este proyecto se distribuye bajo la licencia **MIT**. Puedes usarlo, adaptarlo y extenderlo libremente en tu homelab personal.
+Distribuido bajo la licencia **MIT**.
